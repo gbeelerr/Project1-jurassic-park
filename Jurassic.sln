@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jurassic.webapi", "Jurassic.webapi\Jurassic.webapi.csproj", "{BC5DCDC4-5E43-4954-8AB8-D915176BD2BD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jurassic.movieserviceapi", "Jurassic.movieserviceapi\Jurassic.movieserviceapi.csproj", "{EDC128D5-15C6-40CE-AD03-CF9F8583E2A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jurassic.webapi.Tests", "Jurassic.webapi.Tests\Jurassic.webapi.Tests.csproj", "{77FBABAC-A0F3-4A3B-AC14-05E65BE3825B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jurassic.movieserviceapi.Tests", "Jurassic.movieserviceapi.Tests\Jurassic.movieserviceapi.Tests.csproj", "{EFD1110C-FCBB-422F-B71F-011C6AD5BC75}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BC5DCDC4-5E43-4954-8AB8-D915176BD2BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC5DCDC4-5E43-4954-8AB8-D915176BD2BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC5DCDC4-5E43-4954-8AB8-D915176BD2BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC5DCDC4-5E43-4954-8AB8-D915176BD2BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDC128D5-15C6-40CE-AD03-CF9F8583E2A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDC128D5-15C6-40CE-AD03-CF9F8583E2A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDC128D5-15C6-40CE-AD03-CF9F8583E2A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDC128D5-15C6-40CE-AD03-CF9F8583E2A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77FBABAC-A0F3-4A3B-AC14-05E65BE3825B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77FBABAC-A0F3-4A3B-AC14-05E65BE3825B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77FBABAC-A0F3-4A3B-AC14-05E65BE3825B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77FBABAC-A0F3-4A3B-AC14-05E65BE3825B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EFD1110C-FCBB-422F-B71F-011C6AD5BC75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFD1110C-FCBB-422F-B71F-011C6AD5BC75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFD1110C-FCBB-422F-B71F-011C6AD5BC75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFD1110C-FCBB-422F-B71F-011C6AD5BC75}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

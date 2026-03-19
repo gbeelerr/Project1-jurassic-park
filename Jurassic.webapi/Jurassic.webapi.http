@@ -1,0 +1,6 @@
+@Jurassic.webapi_HostAddress = http://localhost:5035
+
+GET {{Jurassic.webapi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

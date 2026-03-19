@@ -13,3 +13,26 @@
 /dataSources.local.xml
 # Editor-based HTTP Client requests
 /httpRequests/
+
+## --- .NET Standard ---
+[Dd]ebug/
+[Rr]elease/
+bin/
+obj/
+publish/
+.vs/
+
+## --- Rider / JetBrains ---
+.idea/
+*.sln.dotSettings.user
+*.user
+.shelf/
+
+## --- OS Specific ---
+.DS_Store
+Thumbs.db
+
+## --- Secrets & Local Config ---
+# We keep the main appsettings, but ignore the local development overrides
+appsettings.Development.json
+UserSecrets/

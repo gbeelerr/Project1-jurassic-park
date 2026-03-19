@@ -1,0 +1,29 @@
+//https://dbdiagram.io/d/webdb-69bb3e3bfb2db18e3bb4deb7
+
+//Web server database
+Table users {
+  id            uuid         [pk, default: `gen_random_uuid()`]
+  email         varchar(255) [unique, not null]
+  display_name  varchar(100)
+  password_hash text         [not null]
+  role          user_role    [not null, default: 'customer']
+  is_active     boolean      [not null, default: true]
+  created_at    timestamptz  [not null, default: `now()`]
+  updated_at    timestamptz  [not null, default: `now()`]
+}
+
+Table sessions {
+  id            uuid        [pk, default: `gen_random_uuid()`]
+  user_id       uuid        [not null, ref: > users.id]
+  refresh_token text        [unique, not null]
+  ip_address    inet
+  user_agent    text
+  expires_at    timestamptz [not null]
+  created_at    timestamptz [not null, default: `now()`]
+}
+
+Enum user_role {
+  customer
+  staff
+  admin
+}

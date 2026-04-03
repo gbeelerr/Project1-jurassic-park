@@ -1,0 +1,35 @@
+@page "/seat-selector"
+@inject NavigationManager Nav
+
+<PageTitle>Seat Selector</PageTitle>
+
+<h1>Select Your Seats</h1>
+
+<p>(Seat map will be implemented later)</p>
+
+<div class="mb-3">
+    <button class="btn btn-outline-primary me-2">A1</button>
+    <button class="btn btn-outline-primary me-2">A2</button>
+    <button class="btn btn-outline-primary me-2">B1</button>
+    <button class="btn btn-outline-primary me-2">B2</button>
+</div>
+
+<button class="btn btn-success me-2" @onclick="GoCheckout">
+    Continue to Checkout
+</button>
+
+<button class="btn btn-secondary" @onclick="GoBack">
+    Back
+</button>
+
+@code {
+    private void GoCheckout()
+    {
+        Nav.NavigateTo("/checkout");
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/now-playing");
+    }
+}

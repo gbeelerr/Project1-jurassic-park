@@ -205,3 +205,96 @@ CREATE TABLE seat_holds (
     REFERENCES seats (id),
   CONSTRAINT seat_holds_showtime_seat_unique UNIQUE (showtime_id, seat_id)
 );
+
+INSERT INTO movies
+    (title, description, duration_mins, rating, genre, poster_url, trailer_url, status)
+VALUES
+    (
+        'Jurassic Park',
+        'During a preview tour, a theme park suffers a major power breakdown that allows cloned dinosaurs to run loose.',
+        127,
+        'PG-13',
+        ARRAY['Adventure', 'Sci-Fi'],
+        '',
+        '',
+        'now_showing'
+    ),
+    (
+        'The Lost World: Jurassic Park',
+        'A research team travels to Isla Sorna where dinosaurs still live in the wild.',
+        129,
+        'PG-13',
+        ARRAY['Adventure', 'Sci-Fi'],
+        '',
+        '',
+        'now_showing'
+    ),
+    (
+        'Jurassic Park III',
+        'Dr. Alan Grant joins a mission to Isla Sorna and faces dangerous dinosaurs again.',
+        92,
+        'PG-13',
+        ARRAY['Adventure', 'Sci-Fi'],
+        '',
+        '',
+        'now_showing'
+    ),
+    (
+        'Jurassic World',
+        'A new dinosaur theme park is open, but a genetically modified dinosaur escapes.',
+        124,
+        'PG-13',
+        ARRAY['Adventure', 'Action', 'Sci-Fi'],
+        '',
+        '',
+        'now_showing'
+    ),
+    (
+        'Jurassic World: Fallen Kingdom',
+        'The team returns to save dinosaurs from a volcanic disaster and a new threat.',
+        128,
+        'PG-13',
+        ARRAY['Adventure', 'Action', 'Sci-Fi'],
+        '',
+        '',
+        'now_showing'
+    ),
+    (
+        'Jurassic World Dominion',
+        'Humans and dinosaurs must learn to live together in the modern world.',
+        147,
+        'PG-13',
+        ARRAY['Adventure', 'Action', 'Sci-Fi'],
+        '',
+        '',
+        'now_showing'
+    );
+
+INSERT INTO screens (name, screen_type, is_active)
+VALUES
+    ('Raptor Hall', 'standard', true),
+    ('T-Rex Theater', 'vip', true);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+VALUES
+    (
+        (SELECT id FROM movies WHERE title = 'Jurassic Park' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
+    '2026-04-05 18:00:00+00',
+    '2026-04-05 20:07:00+00',
+    15.99
+    ),
+(
+  (SELECT id FROM movies WHERE title = 'Jurassic World' LIMIT 1),
+  (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1),
+  '2026-04-05 20:30:00+00',
+  '2026-04-05 22:34:00+00',
+  18.99
+),
+(
+  (SELECT id FROM movies WHERE title = 'Jurassic World Dominion' LIMIT 1),
+  (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
+  '2026-04-06 19:00:00+00',
+  '2026-04-06 21:27:00+00',
+  16.99
+);

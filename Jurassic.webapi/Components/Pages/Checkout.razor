@@ -1,0 +1,28 @@
+@page "/checkout"
+@inject NavigationManager Nav
+
+<PageTitle>Checkout</PageTitle>
+
+<h1>Checkout</h1>
+
+<p>Enter your information to complete booking.</p>
+
+<input placeholder="Name" class="form-control" />
+<br />
+<input placeholder="Email" class="form-control" />
+<br />
+
+<button class="btn btn-primary me-2">
+    Confirm Booking
+</button>
+
+<button class="btn btn-secondary" @onclick="GoHome">
+    Back to Home
+</button>
+
+@code {
+    private void GoHome()
+    {
+        Nav.NavigateTo("/");
+    }
+}

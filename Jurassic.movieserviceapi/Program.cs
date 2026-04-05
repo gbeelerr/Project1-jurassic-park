@@ -1,8 +1,17 @@
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowWeb", policy =>
+    {
+        policy.WithOrigins("http://localhost:5044", "https://localhost:7022")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
@@ -12,30 +21,27 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
-var summaries = new[]
+app.UseCors("AllowWeb");
+
+var movies = new[]
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+    new Movie(1, "Jurassic Park", 127),
+    new Movie(2, "The Lost World: Jurassic Park", 129),
+    new Movie(3, "Jurassic Park III", 92),
+    new Movie(4, "Jurassic World", 124),
+    new Movie(5, "Jurassic World: Fallen Kingdom", 128),
+    new Movie(6, "Jurassic World Dominion", 147)
 };
 
 app.MapGet("/weatherforecast", () =>
-    {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
-    })
-    .WithName("GetWeatherForecast");
+{
+    return new { message = "API is running" };
+});
+
+app.MapGet("/movies", () => movies);
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+record Movie(int Id, string Title, int Runtime);

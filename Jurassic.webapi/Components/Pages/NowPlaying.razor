@@ -1,0 +1,55 @@
+@page "/now-playing"
+@using BlazorApp1.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<PageTitle>Now Playing</PageTitle>
+
+<h1>Now Playing</h1>
+
+<p>Select a movie to continue.</p>
+
+@if (movies == null)
+{
+    <p>Loading movies...</p>
+}
+else if (movies.Count == 0)
+{
+    <p>No movies found.</p>
+}
+else
+{
+    <ul>
+        @foreach (var movie in movies)
+        {
+            <li class="mb-2">
+                <strong>@movie.Title</strong> - @movie.Runtime mins
+                <button class="btn btn-success ms-2" @onclick="GoToSeatSelector">
+                    Book
+                </button>
+            </li>
+        }
+    </ul>
+}
+
+<button class="btn btn-secondary" @onclick="GoHome">Back</button>
+
+@code {
+    private List<Movie>? movies;
+
+    protected override async Task OnInitializedAsync()
+    {
+        movies = await Http.GetFromJsonAsync<List<Movie>>("http://localhost:5080/movies");
+    }
+
+    private void GoToSeatSelector()
+    {
+        Nav.NavigateTo("/seat-selector");
+    }
+
+    private void GoHome()
+    {
+        Nav.NavigateTo("/");
+    }
+}

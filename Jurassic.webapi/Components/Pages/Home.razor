@@ -1,7 +1,19 @@
 ﻿@page "/"
+@inject NavigationManager Nav
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Jurassic Park Cinema</h1>
 
-Welcome to your new app.
+<p>Welcome to the Jurassic Park movie booking system.</p>
+
+<button class="btn btn-primary" @onclick="GoToNowPlaying">
+    View Now Playing Movies
+</button>
+
+@code {
+    private void GoToNowPlaying()
+    {
+        Nav.NavigateTo("/now-playing");
+    }
+}

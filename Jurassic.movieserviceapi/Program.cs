@@ -25,6 +25,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowWeb");
 
+app.MapGet("/api/health", () => new { status = "ok" });
+
 var movies = new[]
 {
     new Movie(1, "Jurassic Park", 127),

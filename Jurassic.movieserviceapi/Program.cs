@@ -2,6 +2,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddOpenApi();
+builder.Services.AddHealthChecks();
 
 builder.Services.AddCors(options =>
 {
@@ -25,7 +26,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowWeb");
 
-app.MapGet("/api/health", () => new { status = "ok" });
+app.MapHealthChecks("/api/health");
 
 var movies = new[]
 {

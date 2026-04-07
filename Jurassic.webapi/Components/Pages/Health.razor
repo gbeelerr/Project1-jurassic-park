@@ -1,0 +1,43 @@
+﻿@page "/health"
+@inject HttpClient Http
+
+<PageTitle>API Health Status</PageTitle>
+
+<h1>API Health Status</h1>
+
+<p>Checking the health of the Movie Service API...</p>
+
+@if (healthStatus == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="alert @(healthStatus == "Healthy" ? "alert-success" : "alert-danger")">
+        API Status: <strong>@healthStatus</strong>
+    </div>
+}
+
+@code {
+    private string? healthStatus;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/health");
+            if (response.IsSuccessStatusCode)
+            {
+                healthStatus = await response.Content.ReadAsStringAsync();
+            }
+            else
+            {
+                healthStatus = $"Unhealthy (HTTP {response.StatusCode})";
+            }
+        }
+        catch (Exception ex)
+        {
+            healthStatus = $"Error: {ex.Message}";
+        }
+    }
+}

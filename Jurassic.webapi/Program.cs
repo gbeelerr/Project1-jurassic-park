@@ -6,19 +6,36 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddScoped(_ => new HttpClient());
+builder.Services.AddScoped(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var baseUrl = configuration["MovieApi:BaseUrl"]?.TrimEnd('/') ?? "http://localhost:5080";
+    return new HttpClient { BaseAddress = new Uri(baseUrl + "/", UriKind.Absolute) };
+});
 
 var app = builder.Build();
+
+var httpOnly = string.Equals(
+    Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_ONLY"),
+    "true",
+    StringComparison.OrdinalIgnoreCase);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    app.UseHsts();
+    if (!httpOnly)
+    {
+        app.UseHsts();
+    }
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+
+if (!httpOnly)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAntiforgery();
 

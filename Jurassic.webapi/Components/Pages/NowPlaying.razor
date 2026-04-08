@@ -40,7 +40,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        movies = await Http.GetFromJsonAsync<List<Movie>>("http://localhost:5080/movies");
+        movies = await Http.GetFromJsonAsync<List<Movie>>("movies");
     }
 
     private void GoToSeatSelector()

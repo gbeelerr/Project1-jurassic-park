@@ -55,4 +55,6 @@ app.MapGet("/movies/now-playing", async (IMovieRepository repo) =>
 
 app.Run();
 
+public partial class Program { }
+
 record Movie(int Id, string Title, int Runtime);

@@ -10,7 +10,11 @@
 
 <p>Select a movie to continue.</p>
 
-@if (movies == null)
+@if (_isError)
+{
+    <p>Movies currently not available. Please try again later.</p>
+}
+else if (movies == null)
 {
     <p>Loading movies...</p>
 }
@@ -37,10 +41,19 @@ else
 
 @code {
     private List<Movie>? movies;
+    private bool _isError;
 
     protected override async Task OnInitializedAsync()
     {
-        movies = await Http.GetFromJsonAsync<List<Movie>>("movies");
+        try
+        {
+            movies = await Http.GetFromJsonAsync<List<Movie>>("movies");
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            // Optionally log the error here if logging was set up
+        }
     }
 
     private void GoToSeatSelector()

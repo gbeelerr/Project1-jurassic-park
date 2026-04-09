@@ -1,0 +1,88 @@
+name: CI Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-movieservice-api:
+    name: Movie service API tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Jurassic.movieserviceapi.Tests/Jurassic.movieserviceapi.Tests.csproj
+
+      - name: Build
+        run: dotnet build Jurassic.movieserviceapi.Tests/Jurassic.movieserviceapi.Tests.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: >-
+          dotnet test Jurassic.movieserviceapi.Tests/Jurassic.movieserviceapi.Tests.csproj
+          --configuration Release
+          --no-build
+          --verbosity normal
+          --filter "Category!=TDD"
+          --collect:"XPlat Code Coverage"
+
+      - name: TDD specification tests
+        run: >-
+          dotnet test Jurassic.movieserviceapi.Tests/Jurassic.movieserviceapi.Tests.csproj
+          --configuration Release
+          --no-build
+          --verbosity normal
+          --filter "Category=TDD"
+        continue-on-error: true
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: coverage-movieservice-api
+          path: "**/TestResults/**/coverage.cobertura.xml"
+          if-no-files-found: warn
+
+  test-webapi:
+    name: Web API (Blazor) tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Jurassic.webapi.Tests/Jurassic.webapi.Tests.csproj
+
+      - name: Build
+        run: dotnet build Jurassic.webapi.Tests/Jurassic.webapi.Tests.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: >-
+          dotnet test Jurassic.webapi.Tests/Jurassic.webapi.Tests.csproj
+          --configuration Release
+          --no-build
+          --verbosity normal
+          --collect:"XPlat Code Coverage"
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: coverage-webapi
+          path: "**/TestResults/**/coverage.cobertura.xml"
+          if-no-files-found: warn

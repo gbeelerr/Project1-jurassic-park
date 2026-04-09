@@ -36,7 +36,8 @@ services:
       POSTGRES_PASSWORD: jurassic_dev
       POSTGRES_DB: jurassic_api
     ports:
-      - "5432:5432"
+      # Default 5433 avoids clashing with a local PostgreSQL install on 5432.
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - jurassic_pgdata:/var/lib/postgresql/data
       - ./apidb/apidb.sql:/schema/apidb.sql:ro

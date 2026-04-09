@@ -1,4 +1,5 @@
 @page "/seat-selector"
+@using Microsoft.AspNetCore.Components
 @inject NavigationManager Nav
 
 <PageTitle>Seat Selector</PageTitle>
@@ -6,6 +7,14 @@
 <h1>Select Your Seats</h1>
 
 <p>(Seat map will be implemented later)</p>
+
+@if (MovieId.HasValue || ShowtimeId.HasValue)
+{
+    <div class="alert alert-info" role="alert">
+        <div><strong>Selected movie:</strong> @MovieId</div>
+        <div><strong>Selected showtime:</strong> @ShowtimeId</div>
+    </div>
+}
 
 <div class="mb-3">
     <button class="btn btn-outline-primary me-2">A1</button>
@@ -23,6 +32,12 @@
 </button>
 
 @code {
+    [SupplyParameterFromQuery]
+    public Guid? MovieId { get; set; }
+
+    [SupplyParameterFromQuery]
+    public Guid? ShowtimeId { get; set; }
+
     private void GoCheckout()
     {
         Nav.NavigateTo("/checkout");

@@ -231,57 +231,170 @@ INSERT INTO screens (name, screen_type, is_active)
 SELECT 'T-Rex Theater', 'vip', true
 WHERE NOT EXISTS (SELECT 1 FROM screens WHERE name = 'T-Rex Theater');
 
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM showtimes
-        WHERE starts_at >= CURRENT_DATE
-          AND is_cancelled = false
-    ) THEN
-        INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
-        VALUES
-        (
-            (SELECT id FROM movies WHERE title = 'Jurassic Park' LIMIT 1),
-            (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
-            (CURRENT_DATE + TIME '18:00') AT TIME ZONE 'UTC',
-            (CURRENT_DATE + TIME '20:07') AT TIME ZONE 'UTC',
-            15.99
-        ),
-        (
-            (SELECT id FROM movies WHERE title = 'The Lost World: Jurassic Park' LIMIT 1),
-            (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
-            ((CURRENT_DATE + 1) + TIME '16:30') AT TIME ZONE 'UTC',
-            ((CURRENT_DATE + 1) + TIME '18:39') AT TIME ZONE 'UTC',
-            14.99
-        ),
-        (
-            (SELECT id FROM movies WHERE title = 'Jurassic Park III' LIMIT 1),
-            (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1),
-            ((CURRENT_DATE + 1) + TIME '20:15') AT TIME ZONE 'UTC',
-            ((CURRENT_DATE + 1) + TIME '21:47') AT TIME ZONE 'UTC',
-            17.49
-        ),
-        (
-            (SELECT id FROM movies WHERE title = 'Jurassic World' LIMIT 1),
-            (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1),
-            (CURRENT_DATE + TIME '20:30') AT TIME ZONE 'UTC',
-            (CURRENT_DATE + TIME '22:34') AT TIME ZONE 'UTC',
-            18.99
-        ),
-        (
-            (SELECT id FROM movies WHERE title = 'Jurassic World: Fallen Kingdom' LIMIT 1),
-            (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
-            ((CURRENT_DATE + 2) + TIME '18:45') AT TIME ZONE 'UTC',
-            ((CURRENT_DATE + 2) + TIME '20:53') AT TIME ZONE 'UTC',
-            16.49
-        ),
-        (
-            (SELECT id FROM movies WHERE title = 'Jurassic World Dominion' LIMIT 1),
-            (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
-            ((CURRENT_DATE + 2) + TIME '21:00') AT TIME ZONE 'UTC',
-            ((CURRENT_DATE + 2) + TIME '23:27') AT TIME ZONE 'UTC',
-            16.99
-        );
-    END IF;
-END $$;
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic Park' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
+    (CURRENT_DATE + TIME '14:00') AT TIME ZONE 'UTC',
+    (CURRENT_DATE + TIME '16:07') AT TIME ZONE 'UTC',
+    13.99
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1)
+      AND starts_at = ((CURRENT_DATE + TIME '14:00') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic Park' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
+    (CURRENT_DATE + TIME '18:00') AT TIME ZONE 'UTC',
+    (CURRENT_DATE + TIME '20:07') AT TIME ZONE 'UTC',
+    15.99
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1)
+      AND starts_at = ((CURRENT_DATE + TIME '18:00') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic World' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1),
+    (CURRENT_DATE + TIME '17:15') AT TIME ZONE 'UTC',
+    (CURRENT_DATE + TIME '19:19') AT TIME ZONE 'UTC',
+    17.49
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1)
+      AND starts_at = ((CURRENT_DATE + TIME '17:15') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic World' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1),
+    (CURRENT_DATE + TIME '20:30') AT TIME ZONE 'UTC',
+    (CURRENT_DATE + TIME '22:34') AT TIME ZONE 'UTC',
+    18.99
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1)
+      AND starts_at = ((CURRENT_DATE + TIME '20:30') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'The Lost World: Jurassic Park' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
+    ((CURRENT_DATE + 1) + TIME '13:15') AT TIME ZONE 'UTC',
+    ((CURRENT_DATE + 1) + TIME '15:24') AT TIME ZONE 'UTC',
+    13.99
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1)
+      AND starts_at = (((CURRENT_DATE + 1) + TIME '13:15') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'The Lost World: Jurassic Park' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
+    ((CURRENT_DATE + 1) + TIME '16:30') AT TIME ZONE 'UTC',
+    ((CURRENT_DATE + 1) + TIME '18:39') AT TIME ZONE 'UTC',
+    14.99
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1)
+      AND starts_at = (((CURRENT_DATE + 1) + TIME '16:30') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic Park III' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1),
+    ((CURRENT_DATE + 1) + TIME '17:00') AT TIME ZONE 'UTC',
+    ((CURRENT_DATE + 1) + TIME '18:32') AT TIME ZONE 'UTC',
+    16.49
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1)
+      AND starts_at = (((CURRENT_DATE + 1) + TIME '17:00') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic Park III' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1),
+    ((CURRENT_DATE + 1) + TIME '20:15') AT TIME ZONE 'UTC',
+    ((CURRENT_DATE + 1) + TIME '21:47') AT TIME ZONE 'UTC',
+    17.49
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1)
+      AND starts_at = (((CURRENT_DATE + 1) + TIME '20:15') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic World: Fallen Kingdom' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
+    ((CURRENT_DATE + 2) + TIME '15:15') AT TIME ZONE 'UTC',
+    ((CURRENT_DATE + 2) + TIME '17:23') AT TIME ZONE 'UTC',
+    15.99
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1)
+      AND starts_at = (((CURRENT_DATE + 2) + TIME '15:15') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic World: Fallen Kingdom' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1),
+    ((CURRENT_DATE + 2) + TIME '18:45') AT TIME ZONE 'UTC',
+    ((CURRENT_DATE + 2) + TIME '20:53') AT TIME ZONE 'UTC',
+    16.49
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'Raptor Hall' LIMIT 1)
+      AND starts_at = (((CURRENT_DATE + 2) + TIME '18:45') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic World Dominion' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1),
+    ((CURRENT_DATE + 2) + TIME '16:15') AT TIME ZONE 'UTC',
+    ((CURRENT_DATE + 2) + TIME '18:42') AT TIME ZONE 'UTC',
+    16.49
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1)
+      AND starts_at = (((CURRENT_DATE + 2) + TIME '16:15') AT TIME ZONE 'UTC')
+);
+
+INSERT INTO showtimes (movie_id, screen_id, starts_at, ends_at, base_price)
+SELECT
+    (SELECT id FROM movies WHERE title = 'Jurassic World Dominion' LIMIT 1),
+    (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1),
+    ((CURRENT_DATE + 2) + TIME '19:30') AT TIME ZONE 'UTC',
+    ((CURRENT_DATE + 2) + TIME '21:57') AT TIME ZONE 'UTC',
+    17.99
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM showtimes
+    WHERE screen_id = (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1)
+      AND starts_at = (((CURRENT_DATE + 2) + TIME '19:30') AT TIME ZONE 'UTC')
+);

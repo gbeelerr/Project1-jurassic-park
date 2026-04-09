@@ -6,59 +6,181 @@
 
 <PageTitle>Now Playing</PageTitle>
 
-<h1>Now Playing</h1>
+<div class="container mt-4 pb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <h1 class="display-5 fw-bold text-primary">Now Playing</h1>
+        <button class="btn btn-outline-secondary" @onclick="GoHome">
+            Back Home
+        </button>
+    </div>
 
-<p>Select a movie to continue.</p>
+    <p class="lead text-muted mb-4">Select a movie to book your tickets at Jurassic Park Cinema.</p>
 
-@if (_isError)
+    @if (_isError)
+    {
+        <div class="alert alert-danger shadow-sm py-4" role="alert">
+            <h4 class="alert-heading fw-bold">Connection Error</h4>
+            <p class="mb-0">Movies currently not available. Our systems might be experiencing some issues. Please try again later.</p>
+        </div>
+    }
+    else if (movies == null)
+    {
+        <div class="text-center my-5 py-5">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Fetching the latest blockbusters...</p>
+        </div>
+    }
+    else if (movies.Count == 0)
+    {
+        <div class="alert alert-info shadow-sm py-4 text-center" role="alert">
+            <h4 class="alert-heading fw-bold">No Movies Currently Showing</h4>
+            <p class="mb-0">Please check back later for the next scheduled features.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @foreach (var movie in movies)
+            {
+                <div class="col">
+                    <div class="card h-100 shadow-sm transition-hover">
+                        @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                        {
+                            <img src="@movie.PosterUrl" class="card-img-top" alt="@movie.Title Poster" style="object-fit: cover; height: 350px;">
+                        }
+                        else
+                        {
+                            <div class="card-img-top bg-dark d-flex flex-column align-items-center justify-content-center text-white p-4" style="height: 350px;">
+                                <div class="mb-2 text-secondary h1">🎬</div>
+                                <h5 class="fw-bold text-center">@movie.Title</h5>
+                                <span class="badge bg-secondary mt-2">Poster Coming Soon</span>
+                            </div>
+                        }
+                        
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title fw-bold mb-0">@movie.Title</h5>
+                                <span class="badge bg-info text-dark">@movie.Rating</span>
+                            </div>
+                            
+                            <div class="d-flex flex-wrap gap-2 mb-3 text-muted small">
+                                <span class="d-inline-flex align-items-center">
+                                    🕒 @movie.DurationMins mins
+                                </span>
+                                <span class="d-inline-flex align-items-center">
+                                    📺 @movie.ScreenName (@movie.ScreenType)
+                                </span>
+                            </div>
+
+                            <button class="btn btn-outline-info btn-sm w-100" @onclick="() => ShowDescription(movie)">
+                                Movie Info
+                            </button>
+                        </div>
+                        
+                        <div class="card-footer bg-white border-top-0 pt-0 pb-3 px-3">
+                            <button class="btn btn-success btn-lg w-100 shadow-sm fw-bold" @onclick="() => GoToSeatSelector(movie.MovieId)">
+                                Book Tickets
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (_selectedMovie != null)
 {
-    <p>Movies currently not available. Please try again later.</p>
-}
-else if (movies == null)
-{
-    <p>Loading movies...</p>
-}
-else if (movies.Count == 0)
-{
-    <p>No movies found.</p>
-}
-else
-{
-    <ul>
-        @foreach (var movie in movies)
-        {
-            <li class="mb-2">
-                <strong>@movie.Title</strong> - @movie.Runtime mins
-                <button class="btn btn-success ms-2" @onclick="GoToSeatSelector">
-                    Book
-                </button>
-            </li>
-        }
-    </ul>
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title fw-bold">@_selectedMovie.Title</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDescription"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex mb-3 gap-2">
+                        <span class="badge bg-secondary">Rating: @_selectedMovie.Rating</span>
+                        <span class="badge bg-secondary">Duration: @_selectedMovie.DurationMins mins</span>
+                    </div>
+                    <h6 class="fw-bold text-uppercase small text-muted mb-2">Synopsis</h6>
+                    <p class="text-secondary mb-4" style="line-height: 1.6;">@_selectedMovie.Description</p>
+                    
+                    <h6 class="fw-bold text-uppercase small text-muted mb-2">Screening Details</h6>
+                    <p class="mb-3 text-dark">
+                        📍 <strong>@_selectedMovie.ScreenName</strong> (@_selectedMovie.ScreenType)
+                    </p>
+                    
+                    <h6 class="fw-bold text-uppercase small text-muted mb-2">Today's Showtimes</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        @if (_selectedMovie.Showtimes != null && _selectedMovie.Showtimes.Any())
+                        {
+                            @foreach (var showtime in _selectedMovie.Showtimes)
+                            {
+                                <div class="badge bg-light text-dark border p-2 text-start" style="min-width: 80px;">
+                                    <div class="fw-bold">@showtime.StartsAt.ToString("HH:mm")</div>
+                                    <div class="small">@showtime.BasePrice.ToString("C")</div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted small italic">No showtimes available for this screen today.</span>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 p-3">
+                    <button type="button" class="btn btn-secondary px-4" @onclick="CloseDescription">Close</button>
+                    <button type="button" class="btn btn-success px-4 fw-bold" @onclick="() => { CloseDescription(); GoToSeatSelector(_selectedMovie.MovieId); }">Book Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
-<button class="btn btn-secondary" @onclick="GoHome">Back</button>
+<style>
+    .transition-hover {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .transition-hover:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+    }
+</style>
 
 @code {
     private List<Movie>? movies;
     private bool _isError;
+    private Movie? _selectedMovie;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            movies = await Http.GetFromJsonAsync<List<Movie>>("movies");
+            movies = await Http.GetFromJsonAsync<List<Movie>>("movies/now-playing");
         }
         catch (Exception ex)
         {
             _isError = true;
-            // Optionally log the error here if logging was set up
+            Console.WriteLine($"Error fetching movies: {ex.Message}");
         }
     }
 
-    private void GoToSeatSelector()
+    private void ShowDescription(Movie movie)
     {
-        Nav.NavigateTo("/seat-selector");
+        _selectedMovie = movie;
+    }
+
+    private void CloseDescription()
+    {
+        _selectedMovie = null;
+    }
+
+    private void GoToSeatSelector(Guid movieId)
+    {
+        Nav.NavigateTo($"/seat-selector?movieId={movieId}");
     }
 
     private void GoHome()

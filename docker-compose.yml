@@ -10,6 +10,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=jurassic_api;Username=jurassic;Password=jurassic_dev"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   web:
     build:
@@ -19,6 +23,8 @@ services:
     restart: unless-stopped
     ports:
       - "5044:8080"
+    volumes:
+      - jurassic_web_keys:/root/.aspnet/DataProtection-Keys
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
@@ -51,3 +57,4 @@ services:
 
 volumes:
   jurassic_pgdata:
+  jurassic_web_keys:

@@ -14,7 +14,7 @@
         </button>
     </div>
 
-    <p class="lead text-muted mb-4">Select a movie to book your tickets at Jurassic Park Cinema.</p>
+    <p class="lead text-muted mb-4">Select a movie and choose a showtime to start booking.</p>
 
     @if (_isError)
     {
@@ -53,24 +53,24 @@
                         else
                         {
                             <div class="card-img-top bg-dark d-flex flex-column align-items-center justify-content-center text-white p-4" style="height: 350px;">
-                                <div class="mb-2 text-secondary h1">🎬</div>
+                                <div class="mb-2 text-secondary h4">Now Showing</div>
                                 <h5 class="fw-bold text-center">@movie.Title</h5>
                                 <span class="badge bg-secondary mt-2">Poster Coming Soon</span>
                             </div>
                         }
-                        
+
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <h5 class="card-title fw-bold mb-0">@movie.Title</h5>
                                 <span class="badge bg-info text-dark">@movie.Rating</span>
                             </div>
-                            
+
                             <div class="d-flex flex-wrap gap-2 mb-3 text-muted small">
                                 <span class="d-inline-flex align-items-center">
-                                    🕒 @movie.DurationMins mins
+                                    Runtime: @movie.DurationMins mins
                                 </span>
                                 <span class="d-inline-flex align-items-center">
-                                    📺 @movie.ScreenName (@movie.ScreenType)
+                                    Screen: @movie.ScreenName (@movie.ScreenType)
                                 </span>
                             </div>
 
@@ -78,11 +78,31 @@
                                 Movie Info
                             </button>
                         </div>
-                        
+
                         <div class="card-footer bg-white border-top-0 pt-0 pb-3 px-3">
-                            <button class="btn btn-success btn-lg w-100 shadow-sm fw-bold" @onclick="() => GoToSeatSelector(movie.MovieId)">
-                                Book Tickets
-                            </button>
+                            <div class="small text-uppercase fw-bold text-muted mb-2">Showtimes</div>
+                            @if (movie.Showtimes != null && movie.Showtimes.Any())
+                            {
+                                @foreach (var showtimeGroup in GetShowtimeGroups(movie.Showtimes))
+                                {
+                                    <div class="showtime-day mb-3">
+                                        <div class="small fw-semibold text-dark mb-2">@FormatShowDate(showtimeGroup.Key)</div>
+                                        <div class="showtime-grid">
+                                            @foreach (var showtime in showtimeGroup)
+                                            {
+                                                <button class="btn btn-success shadow-sm fw-bold showtime-button" @onclick="() => GoToSeatSelector(movie.MovieId, showtime.ShowtimeId)">
+                                                    <span>@FormatShowTime(showtime.StartsAt)</span>
+                                                    <span class="small">@showtime.BasePrice.ToString("C")</span>
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-muted small">No showtimes available for this screen.</div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -107,33 +127,40 @@
                     </div>
                     <h6 class="fw-bold text-uppercase small text-muted mb-2">Synopsis</h6>
                     <p class="text-secondary mb-4" style="line-height: 1.6;">@_selectedMovie.Description</p>
-                    
+
                     <h6 class="fw-bold text-uppercase small text-muted mb-2">Screening Details</h6>
                     <p class="mb-3 text-dark">
-                        📍 <strong>@_selectedMovie.ScreenName</strong> (@_selectedMovie.ScreenType)
+                        Screen: <strong>@_selectedMovie.ScreenName</strong> (@_selectedMovie.ScreenType)
                     </p>
-                    
-                    <h6 class="fw-bold text-uppercase small text-muted mb-2">Today's Showtimes</h6>
-                    <div class="d-flex flex-wrap gap-2 mb-4">
+
+                    <h6 class="fw-bold text-uppercase small text-muted mb-2">Available Showtimes</h6>
+                    <div class="mb-4">
                         @if (_selectedMovie.Showtimes != null && _selectedMovie.Showtimes.Any())
                         {
-                            @foreach (var showtime in _selectedMovie.Showtimes)
+                            @foreach (var showtimeGroup in GetShowtimeGroups(_selectedMovie.Showtimes))
                             {
-                                <div class="badge bg-light text-dark border p-2 text-start" style="min-width: 80px;">
-                                    <div class="fw-bold">@showtime.StartsAt.ToString("HH:mm")</div>
-                                    <div class="small">@showtime.BasePrice.ToString("C")</div>
+                                <div class="showtime-day mb-3">
+                                    <div class="small fw-semibold text-dark mb-2">@FormatShowDate(showtimeGroup.Key)</div>
+                                    <div class="showtime-grid">
+                                        @foreach (var showtime in showtimeGroup)
+                                        {
+                                            <button type="button" class="btn btn-outline-success showtime-button" @onclick="() => BookSelectedShowtime(_selectedMovie.MovieId, showtime.ShowtimeId)">
+                                                <span>@FormatShowTime(showtime.StartsAt)</span>
+                                                <span class="small">@showtime.BasePrice.ToString("C")</span>
+                                            </button>
+                                        }
+                                    </div>
                                 </div>
                             }
                         }
                         else
                         {
-                            <span class="text-muted small italic">No showtimes available for this screen today.</span>
+                            <span class="text-muted small italic">No showtimes available for this screen.</span>
                         }
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 p-3">
                     <button type="button" class="btn btn-secondary px-4" @onclick="CloseDescription">Close</button>
-                    <button type="button" class="btn btn-success px-4 fw-bold" @onclick="() => { CloseDescription(); GoToSeatSelector(_selectedMovie.MovieId); }">Book Now</button>
                 </div>
             </div>
         </div>
@@ -144,9 +171,24 @@
     .transition-hover {
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
+
     .transition-hover:hover {
         transform: translateY(-8px);
         box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+    }
+
+    .showtime-grid {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    }
+
+    .showtime-button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 68px;
     }
 </style>
 
@@ -178,9 +220,36 @@
         _selectedMovie = null;
     }
 
-    private void GoToSeatSelector(Guid movieId)
+    private static IEnumerable<IGrouping<DateOnly, ShowtimeDetail>> GetShowtimeGroups(IEnumerable<ShowtimeDetail> showtimes)
     {
-        Nav.NavigateTo($"/seat-selector?movieId={movieId}");
+        return showtimes
+            .OrderBy(showtime => showtime.StartsAt)
+            .GroupBy(showtime => DateOnly.FromDateTime(showtime.StartsAt));
+    }
+
+    private static string FormatShowDate(DateOnly date)
+    {
+        return date.ToString("ddd, M/d");
+    }
+
+    private static string FormatShowTime(DateTime startsAt)
+    {
+        return startsAt.ToString("h:mm tt");
+    }
+
+    private void BookSelectedShowtime(Guid movieId, Guid showtimeId)
+    {
+        CloseDescription();
+        GoToSeatSelector(movieId, showtimeId);
+    }
+
+    private void GoToSeatSelector(Guid movieId, Guid? showtimeId = null)
+    {
+        var url = showtimeId.HasValue
+            ? $"/seat-selector?movieId={movieId}&showtimeId={showtimeId.Value}"
+            : $"/seat-selector?movieId={movieId}";
+
+        Nav.NavigateTo(url);
     }
 
     private void GoHome()

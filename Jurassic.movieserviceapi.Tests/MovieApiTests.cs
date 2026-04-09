@@ -5,12 +5,23 @@ using Jurassic.movieserviceapi.Models;
 using Jurassic.movieserviceapi.Repositories;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
 
 namespace Jurassic.movieserviceapi.Tests;
 
 public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private sealed class AlwaysHealthyCheck : IHealthCheck
+    {
+        public Task<HealthCheckResult> CheckHealthAsync(
+            HealthCheckContext context,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(HealthCheckResult.Healthy());
+        }
+    }
+
     private readonly WebApplicationFactory<Program> _factory;
     private readonly Mock<IMovieRepository> _movieRepoMock = new();
 
@@ -18,6 +29,7 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.UseSetting("DatabaseBootstrap:Enabled", "false");
             builder.ConfigureServices(services =>
             {
                 // Remove the existing registration of IMovieRepository
@@ -29,6 +41,15 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
 
                 // Add the mock repository
                 services.AddScoped(_ => _movieRepoMock.Object);
+                services.PostConfigure<HealthCheckServiceOptions>(options =>
+                {
+                    options.Registrations.Clear();
+                    options.Registrations.Add(new HealthCheckRegistration(
+                        "Database",
+                        _ => new AlwaysHealthyCheck(),
+                        failureStatus: null,
+                        tags: null));
+                });
             });
         });
     }

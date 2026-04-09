@@ -1,19 +1,22 @@
 ﻿@page "/"
-@inject NavigationManager Nav
 
 <PageTitle>Home</PageTitle>
 
-<h1>Jurassic Park Cinema</h1>
-
-<p>Welcome to the Jurassic Park movie booking system.</p>
-
-<button class="btn btn-primary" @onclick="GoToNowPlaying">
-    View Now Playing Movies
-</button>
-
-@code {
-    private void GoToNowPlaying()
-    {
-        Nav.NavigateTo("/now-playing");
-    }
-}
+<div class="container text-center py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1 class="display-3 fw-bold text-primary mb-4">Jurassic Park Cinema</h1>
+            <p class="lead mb-5">Welcome to the prehistoric movie booking experience. Immerse yourself in the world of cinema where dinosaurs roam the screens.</p>
+            
+            <div class="card shadow-lg border-0 bg-dark text-white p-5 mb-5 overflow-hidden">
+                <div class="card-body">
+                    <h2 class="h1 mb-4">Experience the Adventure</h2>
+                    <p class="mb-4">Check out our latest showings and book your seats before they go extinct!</p>
+                    <a class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow" href="now-playing">
+                        View Now Playing Movies
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

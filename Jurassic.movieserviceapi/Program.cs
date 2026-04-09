@@ -1,11 +1,29 @@
 using Jurassic.movieserviceapi.Repositories;
+using Jurassic.movieserviceapi.Services;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck("Database", () =>
+    {
+        try
+        {
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            using var connection = new NpgsqlConnection(connectionString);
+            connection.Open();
+            return HealthCheckResult.Healthy();
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy("Database connection failed", ex);
+        }
+    });
 builder.Services.AddScoped<IMovieRepository, MovieRepository>();
+builder.Services.AddSingleton<DatabaseBootstrapper>();
 
 builder.Services.AddCors(options =>
 {
@@ -18,6 +36,13 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+if (builder.Configuration.GetValue("DatabaseBootstrap:Enabled", true))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var bootstrapper = scope.ServiceProvider.GetRequiredService<DatabaseBootstrapper>();
+    await bootstrapper.InitializeAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

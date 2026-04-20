@@ -73,9 +73,11 @@ app.MapGet("/weatherforecast", () =>
 
 app.MapGet("/movies", () => movies);
 
-app.MapGet("/movies/now-playing", async (IMovieRepository repo) => 
+app.MapGet("/movies/now-playing", async (DateOnly? date, IMovieRepository repo) =>
 {
-    return await repo.GetNowPlayingAsync();
+    // Dapper doesn't support DateOnly params directly; pass as DateTime (UTC midnight)
+    var dateUtc = date.HasValue ? date.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null;
+    return await repo.GetNowPlayingAsync(dateUtc);
 });
 
 app.Run();

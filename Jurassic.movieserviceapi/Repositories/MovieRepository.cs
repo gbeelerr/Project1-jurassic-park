@@ -29,7 +29,7 @@ public class MovieRepository : IMovieRepository
                             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
     }
 
-    public async Task<IEnumerable<NowPlayingMovieDto>> GetNowPlayingAsync()
+    public async Task<IEnumerable<NowPlayingMovieDto>> GetNowPlayingAsync(DateTime? date = null)
     {
         using var connection = new NpgsqlConnection(_connectionString);
 
@@ -60,7 +60,10 @@ public class MovieRepository : IMovieRepository
             JOIN screens sc ON st.screen_id = sc.id
             WHERE m.status = 'now_showing'
               AND st.is_cancelled = false
-              AND DATE(st.starts_at AT TIME ZONE 'UTC') >= CURRENT_DATE
+              AND (
+                    (@Date IS NULL AND DATE(st.starts_at AT TIME ZONE 'UTC') >= CURRENT_DATE)
+                 OR (@Date IS NOT NULL AND DATE(st.starts_at AT TIME ZONE 'UTC') = (@Date AT TIME ZONE 'UTC')::date)
+              )
             GROUP BY 
                 m.id, m.title, m.description, m.rating, m.duration_mins, m.poster_url,
                 sc.id, sc.name, sc.screen_type
@@ -68,7 +71,7 @@ public class MovieRepository : IMovieRepository
                 m.title ASC, 
                 sc.name ASC;";
 
-        var rows = await connection.QueryAsync<NowPlayingMovieRow>(sql);
+        var rows = await connection.QueryAsync<NowPlayingMovieRow>(sql, new { Date = date });
 
         return rows.Select(row =>
         {

@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
         <RootNamespace>BlazorApp1</RootNamespace>
+        <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
     </PropertyGroup>
 
 </Project>

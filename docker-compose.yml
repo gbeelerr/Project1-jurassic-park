@@ -11,9 +11,6 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: "Host=postgres;Database=jurassic_api;Username=jurassic;Password=jurassic_dev"
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   web:
     build:
@@ -30,8 +27,6 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_HTTP_ONLY: "true"
       MovieApi__BaseUrl: http://movieservice:8080
-    depends_on:
-      - movieservice
 
   postgres:
     image: postgres:16-alpine

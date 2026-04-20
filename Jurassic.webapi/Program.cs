@@ -37,6 +37,7 @@ if (!httpOnly)
     app.UseHttpsRedirection();
 }
 
+app.UseStaticFiles();
 app.UseAntiforgery();
 
 app.MapStaticAssets();

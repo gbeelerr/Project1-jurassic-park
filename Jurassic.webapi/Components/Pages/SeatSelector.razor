@@ -1,35 +1,170 @@
 @page "/seat-selector"
 @using Microsoft.AspNetCore.Components
+@using System.Globalization
 @inject NavigationManager Nav
 
 <PageTitle>Seat Selector</PageTitle>
 
-<h1>Select Your Seats</h1>
-
-<p>(Seat map will be implemented later)</p>
-
-@if (MovieId.HasValue || ShowtimeId.HasValue)
-{
-    <div class="alert alert-info" role="alert">
-        <div><strong>Selected movie:</strong> @MovieId</div>
-        <div><strong>Selected showtime:</strong> @ShowtimeId</div>
+<div class="container py-4 pb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <div>
+            <h1 class="display-6 fw-bold text-primary mb-1">Choose Your Seats</h1>
+            <div class="text-muted">Pick seats, then continue to checkout.</div>
+        </div>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
     </div>
-}
 
-<div class="mb-3">
-    <button class="btn btn-outline-primary me-2">A1</button>
-    <button class="btn btn-outline-primary me-2">A2</button>
-    <button class="btn btn-outline-primary me-2">B1</button>
-    <button class="btn btn-outline-primary me-2">B2</button>
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="fw-semibold text-muted small text-uppercase">Screen</div>
+                        <div class="badge bg-dark">Screen</div>
+                    </div>
+
+                    <div class="text-center mb-3">
+                        <div class="screen-pill mx-auto mb-2">SCREEN</div>
+                        <div class="small text-muted">Tap seats to select/deselect</div>
+                    </div>
+
+                    <div class="seat-legend d-flex flex-wrap gap-3 justify-content-center mb-3">
+                        <div class="d-flex align-items-center gap-2"><span class="seat-dot available"></span><span class="small text-muted">Available</span></div>
+                        <div class="d-flex align-items-center gap-2"><span class="seat-dot selected"></span><span class="small text-muted">Selected</span></div>
+                        <div class="d-flex align-items-center gap-2"><span class="seat-dot unavailable"></span><span class="small text-muted">Unavailable</span></div>
+                    </div>
+
+                    <div class="seat-grid mx-auto">
+                        @foreach (var seat in Seats)
+                        {
+                            var css = GetSeatCss(seat);
+                            <button type="button"
+                                    class="@css"
+                                    disabled="@seat.IsUnavailable"
+                                    @onclick="() => ToggleSeat(seat)">
+                                @seat.Label
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm border-0 sticky-summary">
+                <div class="card-body">
+                    <div class="small text-muted text-uppercase fw-semibold mb-2">Your selection</div>
+
+                    <div class="mb-3">
+                        <div class="fw-bold">Movie</div>
+                        <div class="text-muted small">@MovieDisplay</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="fw-bold">Showtime</div>
+                        <div class="text-muted small">@ShowtimeDisplay</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="fw-bold">Price</div>
+                        <div class="text-muted small">@PriceDisplay</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="fw-bold">Seats (@SelectedSeats.Count)</div>
+                        @if (SelectedSeats.Count == 0)
+                        {
+                            <div class="text-muted small">No seats selected yet.</div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                @foreach (var s in SelectedSeats.OrderBy(x => x))
+                                {
+                                    <span class="badge bg-primary">@s</span>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                        <div class="fw-bold">Total</div>
+                        <div class="fw-bold">@FormatUsd(Total)</div>
+                    </div>
+
+                    <button class="btn btn-success w-100 mt-3"
+                            disabled="@(SelectedSeats.Count == 0)"
+                            @onclick="GoCheckout">
+                        Continue to Checkout
+                    </button>
+
+                    <div class="small text-muted mt-2">
+                        (Checkout flow can be finished later — routing is working.)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<button class="btn btn-success me-2" @onclick="GoCheckout">
-    Continue to Checkout
-</button>
+<style>
+    .screen-pill {
+        width: min(520px, 100%);
+        background: linear-gradient(90deg, rgba(13,110,253,.15), rgba(13,110,253,.03));
+        border: 1px solid rgba(13,110,253,.25);
+        border-radius: 999px;
+        padding: .5rem 1rem;
+        font-weight: 700;
+        letter-spacing: .12em;
+        color: #0d6efd;
+    }
 
-<button class="btn btn-secondary" @onclick="GoBack">
-    Back
-</button>
+    .seat-legend .seat-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        display: inline-block;
+        border: 1px solid rgba(0,0,0,.15);
+    }
+    .seat-dot.available { background: #f8f9fa; }
+    .seat-dot.selected { background: #0d6efd; border-color: #0d6efd; }
+    .seat-dot.unavailable { background: #adb5bd; }
+
+    .seat-grid {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: .5rem;
+        width: min(520px, 100%);
+    }
+
+    .seat-btn {
+        border-radius: .5rem;
+        padding: .55rem .25rem;
+        font-weight: 700;
+        border: 1px solid rgba(13,110,253,.25);
+        background: #f8f9fa;
+        color: #0d6efd;
+        transition: transform .08s ease, background .15s ease, border-color .15s ease;
+    }
+    .seat-btn:hover { transform: translateY(-1px); }
+    .seat-btn.selected {
+        background: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
+    .seat-btn.unavailable {
+        background: #adb5bd;
+        border-color: #adb5bd;
+        color: #495057;
+        cursor: not-allowed;
+        opacity: .85;
+    }
+
+    .sticky-summary {
+        position: sticky;
+        top: 1rem;
+    }
+</style>
 
 @code {
     [SupplyParameterFromQuery]
@@ -38,9 +173,93 @@
     [SupplyParameterFromQuery]
     public Guid? ShowtimeId { get; set; }
 
+    // Passed from Now Playing so the page can display real info immediately.
+    [SupplyParameterFromQuery]
+    public string? StartsAt { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? BasePrice { get; set; }
+
+    private static readonly CultureInfo UsCulture = CultureInfo.GetCultureInfo("en-US");
+    private decimal UnitPrice => ParseUnitPrice();
+    private decimal Total => UnitPrice * SelectedSeats.Count;
+
+    private string MovieDisplay => MovieId.HasValue ? MovieId.Value.ToString() : "Not selected";
+
+    private string ShowtimeDisplay
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(StartsAt)) return ShowtimeId.HasValue ? ShowtimeId.Value.ToString() : "Not selected";
+            return DateTime.TryParse(StartsAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)
+                ? dt.ToLocalTime().ToString("ddd, M/d • h:mm tt")
+                : StartsAt;
+        }
+    }
+
+    private string PriceDisplay => $"{FormatUsd(UnitPrice)} per seat";
+
+    private static string FormatUsd(decimal amount) => string.Format(UsCulture, "{0:C}", amount);
+
+    private decimal ParseUnitPrice()
+    {
+        if (string.IsNullOrWhiteSpace(BasePrice)) return 0m;
+        return decimal.TryParse(BasePrice, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
+    }
+
+    private sealed record Seat(string Label, bool IsUnavailable);
+
+    private readonly List<Seat> Seats = BuildSeats();
+    private readonly HashSet<string> SelectedSeats = new();
+
+    private static List<Seat> BuildSeats()
+    {
+        // Simple placeholder seat map until we back it with a real seating API.
+        // 6 rows x 8 seats = 48 seats.
+        var list = new List<Seat>(48);
+        var rows = new[] { "A", "B", "C", "D", "E", "F" };
+        foreach (var row in rows)
+        {
+            for (var n = 1; n <= 8; n++)
+            {
+                var label = $"{row}{n}";
+                var unavailable = label is "B4" or "C6" or "E2"; // placeholder blocked seats
+                list.Add(new Seat(label, unavailable));
+            }
+        }
+        return list;
+    }
+
+    private string GetSeatCss(Seat seat)
+    {
+        var selected = SelectedSeats.Contains(seat.Label);
+        if (seat.IsUnavailable) return "seat-btn unavailable";
+        return selected ? "seat-btn selected" : "seat-btn";
+    }
+
+    private void ToggleSeat(Seat seat)
+    {
+        if (seat.IsUnavailable) return;
+
+        if (!SelectedSeats.Add(seat.Label))
+        {
+            SelectedSeats.Remove(seat.Label);
+        }
+    }
+
     private void GoCheckout()
     {
-        Nav.NavigateTo("/checkout");
+        // Keep this routing-only for now; params let Checkout be filled out later.
+        var query = new List<string>();
+        if (MovieId.HasValue) query.Add($"movieId={MovieId.Value}");
+        if (ShowtimeId.HasValue) query.Add($"showtimeId={ShowtimeId.Value}");
+        if (!string.IsNullOrWhiteSpace(StartsAt)) query.Add($"startsAt={Uri.EscapeDataString(StartsAt)}");
+        query.Add($"seats={Uri.EscapeDataString(string.Join(",", SelectedSeats.OrderBy(x => x)))}");
+        query.Add($"unitPrice={Uri.EscapeDataString(UnitPrice.ToString(CultureInfo.InvariantCulture))}");
+        query.Add($"total={Uri.EscapeDataString(Total.ToString(CultureInfo.InvariantCulture))}");
+
+        var url = "/checkout" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
+        Nav.NavigateTo(url);
     }
 
     private void GoBack()

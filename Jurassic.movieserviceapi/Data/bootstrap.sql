@@ -158,7 +158,7 @@ SELECT
     127,
     'PG-13',
     ARRAY['Adventure', 'Sci-Fi'],
-    'https://m.media-amazon.com/images/M/MV5BNzE3ODIxNzYtY2Y4ZC00Y2Y2LWJlZjgtNzY2YjYzODQ0YmVhXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    'https://upload.wikimedia.org/wikipedia/en/e/e7/Jurassic_Park_poster.jpg',
     '',
     'now_showing'
 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title = 'Jurassic Park');
@@ -170,7 +170,7 @@ SELECT
     129,
     'PG-13',
     ARRAY['Adventure', 'Sci-Fi'],
-    'https://m.media-amazon.com/images/M/MV5BMDIwZGNiZWYtNjRkNy00Y2E0LTgwMWItYTZkYzg4N2U4ZTI4XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    'https://upload.wikimedia.org/wikipedia/en/c/cc/The_Lost_World_%E2%80%93_Jurassic_Park_poster.jpg',
     '',
     'now_showing'
 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title = 'The Lost World: Jurassic Park');
@@ -182,7 +182,7 @@ SELECT
     92,
     'PG-13',
     ARRAY['Adventure', 'Sci-Fi'],
-    'https://m.media-amazon.com/images/M/MV5BMzYzOTQ2NTYtNTQzOC00NGIwLTlmMGItZjU3NzIwZjQwZjRlXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    'https://upload.wikimedia.org/wikipedia/en/6/6d/Jurassic_Park_III_poster.jpg',
     '',
     'now_showing'
 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title = 'Jurassic Park III');
@@ -194,7 +194,7 @@ SELECT
     124,
     'PG-13',
     ARRAY['Adventure', 'Action', 'Sci-Fi'],
-    'https://m.media-amazon.com/images/M/MV5BMTQ0NzA0NTYxNF5BMl5BanBnXkFtZTgwNTM3MTY4NTE@._V1_FMjpg_UX1000_.jpg',
+    'https://upload.wikimedia.org/wikipedia/en/6/6e/Jurassic_World_poster.jpg',
     '',
     'now_showing'
 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title = 'Jurassic World');
@@ -206,7 +206,7 @@ SELECT
     128,
     'PG-13',
     ARRAY['Adventure', 'Action', 'Sci-Fi'],
-    'https://m.media-amazon.com/images/M/MV5BNDU1M2QyYjYtNDBiNC00NmQ5LWI4YmYtN2VhNjA3ZGMwZjE0XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    'https://upload.wikimedia.org/wikipedia/en/c/c6/Jurassic_World_Fallen_Kingdom.png',
     '',
     'now_showing'
 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title = 'Jurassic World: Fallen Kingdom');
@@ -218,10 +218,41 @@ SELECT
     147,
     'PG-13',
     ARRAY['Adventure', 'Action', 'Sci-Fi'],
-    'https://m.media-amazon.com/images/M/MV5BODQ0NzgwZDQtZWM3MS00NGQ5LTg0N2EtYTJmNjk1Yjc0NTRjXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    'https://upload.wikimedia.org/wikipedia/en/c/ce/JurassicWorldDominion_Poster.jpeg',
     '',
     'now_showing'
 WHERE NOT EXISTS (SELECT 1 FROM movies WHERE title = 'Jurassic World Dominion');
+
+-- Backfill poster URLs for databases that were initialized from older or broken seed data.
+UPDATE movies
+SET poster_url = 'https://upload.wikimedia.org/wikipedia/en/e/e7/Jurassic_Park_poster.jpg'
+WHERE title = 'Jurassic Park'
+  AND (COALESCE(poster_url, '') = '' OR poster_url LIKE 'https://m.media-amazon.com/%');
+
+UPDATE movies
+SET poster_url = 'https://upload.wikimedia.org/wikipedia/en/c/cc/The_Lost_World_%E2%80%93_Jurassic_Park_poster.jpg'
+WHERE title = 'The Lost World: Jurassic Park'
+  AND (COALESCE(poster_url, '') = '' OR poster_url LIKE 'https://m.media-amazon.com/%');
+
+UPDATE movies
+SET poster_url = 'https://upload.wikimedia.org/wikipedia/en/6/6d/Jurassic_Park_III_poster.jpg'
+WHERE title = 'Jurassic Park III'
+  AND (COALESCE(poster_url, '') = '' OR poster_url LIKE 'https://m.media-amazon.com/%');
+
+UPDATE movies
+SET poster_url = 'https://upload.wikimedia.org/wikipedia/en/6/6e/Jurassic_World_poster.jpg'
+WHERE title = 'Jurassic World'
+  AND (COALESCE(poster_url, '') = '' OR poster_url LIKE 'https://m.media-amazon.com/%');
+
+UPDATE movies
+SET poster_url = 'https://upload.wikimedia.org/wikipedia/en/c/c6/Jurassic_World_Fallen_Kingdom.png'
+WHERE title = 'Jurassic World: Fallen Kingdom'
+  AND (COALESCE(poster_url, '') = '' OR poster_url LIKE 'https://m.media-amazon.com/%');
+
+UPDATE movies
+SET poster_url = 'https://upload.wikimedia.org/wikipedia/en/c/ce/JurassicWorldDominion_Poster.jpeg'
+WHERE title = 'Jurassic World Dominion'
+  AND (COALESCE(poster_url, '') = '' OR poster_url LIKE 'https://m.media-amazon.com/%');
 
 INSERT INTO screens (name, screen_type, is_active)
 SELECT 'Raptor Hall', 'standard', true

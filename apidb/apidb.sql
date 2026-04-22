@@ -215,7 +215,7 @@ VALUES
         127,
         'PG-13',
         ARRAY['Adventure', 'Sci-Fi'],
-        '',
+        'https://upload.wikimedia.org/wikipedia/en/e/e7/Jurassic_Park_poster.jpg',
         '',
         'now_showing'
     ),
@@ -225,7 +225,7 @@ VALUES
         129,
         'PG-13',
         ARRAY['Adventure', 'Sci-Fi'],
-        '',
+        'https://upload.wikimedia.org/wikipedia/en/c/cc/The_Lost_World_%E2%80%93_Jurassic_Park_poster.jpg',
         '',
         'now_showing'
     ),
@@ -235,7 +235,7 @@ VALUES
         92,
         'PG-13',
         ARRAY['Adventure', 'Sci-Fi'],
-        '',
+        'https://upload.wikimedia.org/wikipedia/en/6/6d/Jurassic_Park_III_poster.jpg',
         '',
         'now_showing'
     ),
@@ -245,7 +245,7 @@ VALUES
         124,
         'PG-13',
         ARRAY['Adventure', 'Action', 'Sci-Fi'],
-        '',
+        'https://upload.wikimedia.org/wikipedia/en/6/6e/Jurassic_World_poster.jpg',
         '',
         'now_showing'
     ),
@@ -255,7 +255,7 @@ VALUES
         128,
         'PG-13',
         ARRAY['Adventure', 'Action', 'Sci-Fi'],
-        '',
+        'https://upload.wikimedia.org/wikipedia/en/c/c6/Jurassic_World_Fallen_Kingdom.png',
         '',
         'now_showing'
     ),
@@ -265,7 +265,7 @@ VALUES
         147,
         'PG-13',
         ARRAY['Adventure', 'Action', 'Sci-Fi'],
-        '',
+        'https://upload.wikimedia.org/wikipedia/en/c/ce/JurassicWorldDominion_Poster.jpeg',
         '',
         'now_showing'
     );

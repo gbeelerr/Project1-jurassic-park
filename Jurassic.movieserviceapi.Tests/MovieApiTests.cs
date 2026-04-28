@@ -121,6 +121,53 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
         content.Should().Contain("Jurassic Park");
     }
 
+    [Fact]
+    public async Task GetShowtimeById_ShouldReturnShowtimeDetails_WhenFound()
+    {
+        // Arrange
+        var showtimeId = Guid.NewGuid();
+        var details = new ShowtimeDetailsDto(
+            showtimeId,
+            Guid.NewGuid(),
+            "Jurassic Park",
+            "IMAX",
+            DateTime.UtcNow.AddHours(2),
+            18.50m
+        );
+
+        _movieRepoMock.Setup(repo => repo.GetShowtimeDetailsAsync(showtimeId))
+            .ReturnsAsync(details);
+
+        var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync($"/showtimes/{showtimeId}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<ShowtimeDetailsDto>();
+        body.Should().NotBeNull();
+        body!.ShowtimeId.Should().Be(showtimeId);
+        body.MovieTitle.Should().Be("Jurassic Park");
+    }
+
+    [Fact]
+    public async Task GetShowtimeById_ShouldReturnNotFound_WhenMissing()
+    {
+        // Arrange
+        var showtimeId = Guid.NewGuid();
+        _movieRepoMock.Setup(repo => repo.GetShowtimeDetailsAsync(showtimeId))
+            .ReturnsAsync((ShowtimeDetailsDto?)null);
+
+        var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync($"/showtimes/{showtimeId}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     // TDD / Future Tests (Expected to fail until implemented)
     // These serve as a specification for what the API should provide in the future.
 

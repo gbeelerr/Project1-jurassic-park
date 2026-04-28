@@ -7,6 +7,16 @@ namespace Jurassic.movieserviceapi.Repositories;
 
 public class MovieRepository : IMovieRepository
 {
+    private sealed class ShowtimeDetailsRow
+    {
+        public Guid ShowtimeId { get; init; }
+        public Guid MovieId { get; init; }
+        public string MovieTitle { get; init; } = "";
+        public string ScreenName { get; init; } = "";
+        public DateTime StartsAt { get; init; }
+        public decimal BasePrice { get; init; }
+    }
+
     private sealed class NowPlayingMovieRow
     {
         public Guid MovieId { get; init; }
@@ -92,5 +102,40 @@ public class MovieRepository : IMovieRepository
                 showtimes
             );
         });
+    }
+
+    public async Task<ShowtimeDetailsDto?> GetShowtimeDetailsAsync(Guid showtimeId)
+    {
+        using var connection = new NpgsqlConnection(_connectionString);
+
+        const string sql = @"
+            SELECT
+                st.id AS ShowtimeId,
+                m.id AS MovieId,
+                m.title AS MovieTitle,
+                sc.name AS ScreenName,
+                st.starts_at AS StartsAt,
+                st.base_price AS BasePrice
+            FROM showtimes st
+            JOIN movies m ON m.id = st.movie_id
+            JOIN screens sc ON sc.id = st.screen_id
+            WHERE st.id = @ShowtimeId
+              AND st.is_cancelled = false
+            LIMIT 1;";
+
+        var row = await connection.QuerySingleOrDefaultAsync<ShowtimeDetailsRow>(sql, new { ShowtimeId = showtimeId });
+        if (row is null)
+        {
+            return null;
+        }
+
+        return new ShowtimeDetailsDto(
+            row.ShowtimeId,
+            row.MovieId,
+            row.MovieTitle,
+            row.ScreenName,
+            row.StartsAt,
+            row.BasePrice
+        );
     }
 }

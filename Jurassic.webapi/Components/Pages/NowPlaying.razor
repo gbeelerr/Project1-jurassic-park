@@ -102,7 +102,7 @@
                                         <div class="showtime-grid">
                                             @foreach (var showtime in showtimeGroup)
                                             {
-                                                <button class="btn btn-success shadow-sm fw-bold showtime-button" @onclick="() => GoToSeatSelector(movie.MovieId, showtime.ShowtimeId)">
+                                                <button class="btn btn-success shadow-sm fw-bold showtime-button" @onclick="() => GoToSeatSelector(movie.MovieId, movie.Title, showtime.ShowtimeId, showtime.StartsAt, showtime.BasePrice)">
                                                     <span>@FormatShowTime(showtime.StartsAt)</span>
                                                     <span class="small">@FormatUsd(showtime.BasePrice)</span>
                                                 </button>
@@ -167,7 +167,7 @@
                                     <div class="showtime-grid">
                                         @foreach (var showtime in showtimeGroup)
                                         {
-                                            <button type="button" class="btn btn-outline-success showtime-button" @onclick="() => BookSelectedShowtime(_selectedMovie.MovieId, showtime.ShowtimeId, showtime.StartsAt, showtime.BasePrice)">
+                                            <button type="button" class="btn btn-outline-success showtime-button" @onclick="() => BookSelectedShowtime(_selectedMovie.MovieId, _selectedMovie.Title, showtime.ShowtimeId, showtime.StartsAt, showtime.BasePrice)">
                                                 <span>@FormatShowTime(showtime.StartsAt)</span>
                                                 <span class="small">@FormatUsd(showtime.BasePrice)</span>
                                             </button>
@@ -279,17 +279,20 @@
 
     private static string FormatUsd(decimal amount) => string.Format(UsCulture, "{0:C}", amount);
 
-    private void BookSelectedShowtime(Guid movieId, Guid showtimeId, DateTime startsAt, decimal basePrice)
+    private void BookSelectedShowtime(Guid movieId, string movieTitle, Guid showtimeId, DateTime startsAt, decimal basePrice)
     {
         CloseDescription();
-        GoToSeatSelector(movieId, showtimeId, startsAt, basePrice);
+        GoToSeatSelector(movieId, movieTitle, showtimeId, startsAt, basePrice);
     }
 
-    private void GoToSeatSelector(Guid movieId, Guid? showtimeId = null, DateTime? startsAt = null, decimal? basePrice = null)
+    private void GoToSeatSelector(Guid movieId, string? movieTitle = null, Guid? showtimeId = null, DateTime? startsAt = null, decimal? basePrice = null)
     {
-        // Pass enough info for Seat Selector to display a real selection summary
-        // (even before a dedicated showtime-details endpoint exists).
         var query = new List<string> { $"movieId={movieId}" };
+
+        if (!string.IsNullOrWhiteSpace(movieTitle))
+        {
+            query.Add($"movieTitle={Uri.EscapeDataString(movieTitle)}");
+        }
 
         if (showtimeId.HasValue)
         {

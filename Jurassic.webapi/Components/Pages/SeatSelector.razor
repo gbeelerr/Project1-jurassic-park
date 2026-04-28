@@ -1,6 +1,9 @@
 @page "/seat-selector"
+@using BlazorApp1.Models
 @using Microsoft.AspNetCore.Components
 @using System.Globalization
+@using System.Net.Http.Json
+@inject HttpClient Http
 @inject NavigationManager Nav
 
 <PageTitle>Seat Selector</PageTitle>
@@ -173,6 +176,9 @@
     [SupplyParameterFromQuery]
     public Guid? ShowtimeId { get; set; }
 
+    [SupplyParameterFromQuery]
+    public string? MovieTitle { get; set; }
+
     // Passed from Now Playing so the page can display real info immediately.
     [SupplyParameterFromQuery]
     public string? StartsAt { get; set; }
@@ -184,13 +190,17 @@
     private decimal UnitPrice => ParseUnitPrice();
     private decimal Total => UnitPrice * SelectedSeats.Count;
 
-    private string MovieDisplay => MovieId.HasValue ? MovieId.Value.ToString() : "Not selected";
+    private string MovieDisplay => string.IsNullOrWhiteSpace(MovieTitle) ? "Not selected" : MovieTitle;
 
     private string ShowtimeDisplay
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(StartsAt)) return ShowtimeId.HasValue ? ShowtimeId.Value.ToString() : "Not selected";
+            if (string.IsNullOrWhiteSpace(StartsAt))
+            {
+                return "Not selected";
+            }
+
             return DateTime.TryParse(StartsAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)
                 ? dt.ToLocalTime().ToString("ddd, M/d • h:mm tt")
                 : StartsAt;
@@ -205,6 +215,39 @@
     {
         if (string.IsNullOrWhiteSpace(BasePrice)) return 0m;
         return decimal.TryParse(BasePrice, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!ShowtimeId.HasValue || HasFriendlyDisplayData())
+        {
+            return;
+        }
+
+        try
+        {
+            var details = await Http.GetFromJsonAsync<ShowtimeDetailsResponse>($"showtimes/{ShowtimeId.Value}");
+            if (details is null)
+            {
+                return;
+            }
+
+            MovieId ??= details.MovieId;
+            MovieTitle ??= details.MovieTitle;
+            StartsAt ??= details.StartsAt.ToUniversalTime().ToString("o");
+            BasePrice ??= details.BasePrice.ToString(CultureInfo.InvariantCulture);
+        }
+        catch
+        {
+            // Keep graceful fallback labels when details endpoint is unavailable.
+        }
+    }
+
+    private bool HasFriendlyDisplayData()
+    {
+        return !string.IsNullOrWhiteSpace(MovieTitle)
+               && !string.IsNullOrWhiteSpace(StartsAt)
+               && !string.IsNullOrWhiteSpace(BasePrice);
     }
 
     private sealed record Seat(string Label, bool IsUnavailable);
@@ -253,6 +296,7 @@
         var query = new List<string>();
         if (MovieId.HasValue) query.Add($"movieId={MovieId.Value}");
         if (ShowtimeId.HasValue) query.Add($"showtimeId={ShowtimeId.Value}");
+        if (!string.IsNullOrWhiteSpace(MovieTitle)) query.Add($"movieTitle={Uri.EscapeDataString(MovieTitle)}");
         if (!string.IsNullOrWhiteSpace(StartsAt)) query.Add($"startsAt={Uri.EscapeDataString(StartsAt)}");
         query.Add($"seats={Uri.EscapeDataString(string.Join(",", SelectedSeats.OrderBy(x => x)))}");
         query.Add($"unitPrice={Uri.EscapeDataString(UnitPrice.ToString(CultureInfo.InvariantCulture))}");

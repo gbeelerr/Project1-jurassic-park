@@ -80,6 +80,12 @@ app.MapGet("/movies/now-playing", async (DateOnly? date, IMovieRepository repo) 
     return await repo.GetNowPlayingAsync(dateUtc);
 });
 
+app.MapGet("/showtimes/{showtimeId:guid}", async (Guid showtimeId, IMovieRepository repo) =>
+{
+    var showtimeDetails = await repo.GetShowtimeDetailsAsync(showtimeId);
+    return showtimeDetails is null ? Results.NotFound() : Results.Ok(showtimeDetails);
+});
+
 app.Run();
 
 public partial class Program { }

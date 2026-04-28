@@ -46,4 +46,25 @@ namespace BlazorApp1.Models
         [JsonPropertyName("base_price")]
         public decimal BasePrice { get; set; }
     }
+
+public class ShowtimeDetailsResponse
+{
+    [JsonPropertyName("showtime_id")]
+    public Guid ShowtimeId { get; set; }
+
+    [JsonPropertyName("movie_id")]
+    public Guid MovieId { get; set; }
+
+    [JsonPropertyName("movie_title")]
+    public string MovieTitle { get; set; } = "";
+
+    [JsonPropertyName("screen_name")]
+    public string ScreenName { get; set; } = "";
+
+    [JsonPropertyName("starts_at")]
+    public DateTime StartsAt { get; set; }
+
+    [JsonPropertyName("base_price")]
+    public decimal BasePrice { get; set; }
+}
 }

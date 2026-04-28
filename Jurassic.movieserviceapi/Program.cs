@@ -73,6 +73,11 @@ app.MapGet("/weatherforecast", () =>
 
 app.MapGet("/movies", () => movies);
 
+app.MapGet("/movies/posters", async (IMovieRepository repo) =>
+{
+    return await repo.GetMoviePostersAsync();
+});
+
 app.MapGet("/movies/now-playing", async (DateOnly? date, IMovieRepository repo) =>
 {
     // Dapper doesn't support DateOnly params directly; pass as DateTime (UTC midnight)

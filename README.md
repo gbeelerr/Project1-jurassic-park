@@ -19,6 +19,11 @@ From the **repository root** — the folder that contains `docker-compose.yml` (
 ```bash
 cd /path/to/SE498
 docker compose up --build -d
+```   
+
+To rerun after changes   
+```bash
+docker compose down --remove-orphans ; docker compose up --build
 ```
 
 Then open **http://localhost:5044** (Blazor web), **http://localhost:5080/movies** (movie API), and connect to Postgres on the host at **port 5433** (user `jurassic`, password `jurassic_dev`, databases `jurassic_api` and `jurassic_web`).

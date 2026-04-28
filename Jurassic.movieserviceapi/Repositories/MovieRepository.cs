@@ -7,6 +7,13 @@ namespace Jurassic.movieserviceapi.Repositories;
 
 public class MovieRepository : IMovieRepository
 {
+    private sealed class MoviePosterRow
+    {
+        public Guid MovieId { get; init; }
+        public string Title { get; init; } = "";
+        public string PosterUrl { get; init; } = "";
+    }
+
     private sealed class ShowtimeDetailsRow
     {
         public Guid ShowtimeId { get; init; }
@@ -37,6 +44,22 @@ public class MovieRepository : IMovieRepository
     {
         _connectionString = configuration.GetConnectionString("DefaultConnection") 
                             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    }
+
+    public async Task<IEnumerable<MoviePosterDto>> GetMoviePostersAsync()
+    {
+        using var connection = new NpgsqlConnection(_connectionString);
+
+        const string sql = @"
+            SELECT
+                m.id AS MovieId,
+                m.title AS Title,
+                COALESCE(m.poster_url, '') AS PosterUrl
+            FROM movies m
+            ORDER BY m.title ASC;";
+
+        var rows = await connection.QueryAsync<MoviePosterRow>(sql);
+        return rows.Select(row => new MoviePosterDto(row.MovieId, row.Title, row.PosterUrl));
     }
 
     public async Task<IEnumerable<NowPlayingMovieDto>> GetNowPlayingAsync(DateTime? date = null)

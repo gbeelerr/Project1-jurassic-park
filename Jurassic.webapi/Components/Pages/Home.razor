@@ -1,22 +1,272 @@
 ﻿@page "/"
+@using BlazorApp1.Models
+@using System.Net.Http.Json
+@using System.Linq
+@inject HttpClient Http
 
 <PageTitle>Home</PageTitle>
 
-<div class="container text-center py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <h1 class="display-3 fw-bold text-primary mb-4">Jurassic Park Cinema</h1>
-            <p class="lead mb-5">Welcome to the prehistoric movie booking experience. Immerse yourself in the world of cinema where dinosaurs roam the screens.</p>
-            
-            <div class="card shadow-lg border-0 bg-dark text-white p-5 mb-5 overflow-hidden">
-                <div class="card-body">
-                    <h2 class="h1 mb-4">Experience the Adventure</h2>
-                    <p class="mb-4">Check out our latest showings and book your seats before they go extinct!</p>
-                    <a class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow" href="/now-playing">
-                        View Now Playing Movies
-                    </a>
-                </div>
-            </div>
-        </div>
+<div class="container py-5 home-page d-flex flex-column">
+    <div class="text-center mb-4 home-title">
+        <h1 class="display-4 fw-bold text-primary mb-0">Jurassic Park Cinema</h1>
     </div>
+
+    @if (_isError)
+    {
+        <div class="alert alert-danger text-center" role="alert">
+            Unable to load movies right now. Please try again shortly.
+        </div>
+    }
+    else if (movies == null)
+    {
+        <div class="text-center my-5 py-5">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mb-0">Loading movies...</p>
+        </div>
+    }
+    else if (movieSlides.Count == 0)
+    {
+        <div class="alert alert-info text-center" role="alert">
+            No movie posters found.
+        </div>
+    }
+    else
+    {
+        <div id="moviePosterCarousel" class="carousel slide poster-carousel-shell">
+            <div class="carousel-indicators">
+                @for (var i = 0; i < movieSlides.Count; i++)
+                {
+                    <button type="button"
+                            class="@(i == activeSlideIndex ? "active" : null)"
+                            aria-current="@(i == activeSlideIndex ? "true" : null)"
+                            aria-label="@($"Slide {i + 1}")"
+                            @onclick="() => GoToSlide(i)"></button>
+                }
+            </div>
+
+            @if (movieSlides.Count > 1)
+            {
+                <button class="carousel-peek carousel-peek-start d-none d-md-flex"
+                        type="button"
+                        @onclick="PreviousSlide"
+                        aria-label="Show previous slide">
+                    <img src="@GetPreviousSlidePreviewPoster()"
+                         alt="Previous movie preview"
+                         class="peek-image" />
+                </button>
+
+                <button class="carousel-peek carousel-peek-end d-none d-md-flex"
+                        type="button"
+                        @onclick="NextSlide"
+                        aria-label="Show next slide">
+                    <img src="@GetNextSlidePreviewPoster()"
+                         alt="Next movie preview"
+                         class="peek-image" />
+                </button>
+            }
+
+            <div class="carousel-inner">
+                @for (var i = 0; i < movieSlides.Count; i++)
+                {
+                    <div class="carousel-item @(i == activeSlideIndex ? "active" : null)">
+                        <div class="row g-4 justify-content-center px-5">
+                            @foreach (var movie in movieSlides[i])
+                            {
+                                <div class="col-12 col-sm-6 col-lg-4 d-flex">
+                                    <div class="w-100 d-flex flex-column align-items-center">
+                                        <img src="@movie.PosterUrl"
+                                             class="d-block poster-image"
+                                             alt="@($"{movie.Title} poster")" />
+                                        <h5 class="mt-3 mb-0 text-center fw-semibold">@movie.Title</h5>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <button class="carousel-control-prev" type="button" @onclick="PreviousSlide">
+                <span class="carousel-control-prev-icon carousel-nav-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" @onclick="NextSlide">
+                <span class="carousel-control-next-icon carousel-nav-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+    }
 </div>
+
+<div class="fixed-bottom d-flex justify-content-center pb-4">
+    <a class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow" href="/now-playing">
+        Get Tickets
+    </a>
+</div>
+
+<style>
+    .home-page {
+        min-height: 100vh;
+        padding-bottom: 8rem;
+    }
+
+    .home-title {
+        margin-top: 0.5rem;
+    }
+
+    .home-page > #moviePosterCarousel {
+        margin-top: auto;
+        margin-bottom: auto;
+    }
+
+    .poster-image {
+        width: min(100%, 320px);
+        max-width: 260px;
+        height: 390px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
+    }
+
+    #moviePosterCarousel .carousel-indicators [data-bs-target] {
+        background-color: #1f2937;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 0;
+        opacity: 0.55;
+    }
+
+    #moviePosterCarousel .carousel-indicators .active {
+        opacity: 1;
+        background-color: #0d6efd;
+    }
+
+    .carousel-nav-icon {
+        background-color: rgba(0, 0, 0, 0.75);
+        border-radius: 999px;
+        padding: 1.1rem;
+        background-size: 55% 55%;
+    }
+
+    .poster-carousel-shell {
+        padding-inline: 2.75rem;
+    }
+
+    .carousel-peek {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 78px;
+        height: 130px;
+        border: 0;
+        border-radius: 0.5rem;
+        padding: 0;
+        background: transparent;
+        z-index: 4;
+        overflow: hidden;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.25);
+        opacity: 0.85;
+    }
+
+    .carousel-peek:hover {
+        opacity: 1;
+    }
+
+    .carousel-peek-start {
+        left: 0.25rem;
+    }
+
+    .carousel-peek-end {
+        right: 0.25rem;
+    }
+
+    .peek-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+</style>
+
+@code {
+    private List<Movie>? movies;
+    private List<List<Movie>> movieSlides = new();
+    private int activeSlideIndex;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            movies = await Http.GetFromJsonAsync<List<Movie>>("movies/posters") ?? new List<Movie>();
+            var linkedMovies = movies
+                .Where(movie => !string.IsNullOrWhiteSpace(movie.PosterUrl))
+                .ToList();
+
+            movieSlides = linkedMovies
+                .Select((movie, index) => new { movie, index })
+                .GroupBy(x => x.index / 3)
+                .Select(group => group.Select(x => x.movie).ToList())
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            Console.WriteLine($"Error fetching movie posters: {ex.Message}");
+        }
+    }
+
+    private void PreviousSlide()
+    {
+        if (movieSlides.Count == 0)
+        {
+            return;
+        }
+
+        activeSlideIndex = (activeSlideIndex - 1 + movieSlides.Count) % movieSlides.Count;
+    }
+
+    private void NextSlide()
+    {
+        if (movieSlides.Count == 0)
+        {
+            return;
+        }
+
+        activeSlideIndex = (activeSlideIndex + 1) % movieSlides.Count;
+    }
+
+    private string GetPreviousSlidePreviewPoster()
+    {
+        if (movieSlides.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var previousIndex = (activeSlideIndex - 1 + movieSlides.Count) % movieSlides.Count;
+        return movieSlides[previousIndex].Last().PosterUrl;
+    }
+
+    private string GetNextSlidePreviewPoster()
+    {
+        if (movieSlides.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var nextIndex = (activeSlideIndex + 1) % movieSlides.Count;
+        return movieSlides[nextIndex].First().PosterUrl;
+    }
+
+    private void GoToSlide(int index)
+    {
+        if (index < 0 || index >= movieSlides.Count)
+        {
+            return;
+        }
+
+        activeSlideIndex = index;
+    }
+}

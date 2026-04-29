@@ -30,6 +30,8 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("DatabaseBootstrap:Enabled", "false");
+            builder.UseSetting("WebAuthSeed:Enabled", "false");
+            builder.UseSetting("Auth:JwtSigningKey", "test-signing-key-must-be-at-least-32-chars!");
             builder.ConfigureServices(services =>
             {
                 // Remove the existing registration of IMovieRepository
@@ -77,7 +79,7 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
             )
         };
 
-        _movieRepoMock.Setup(repo => repo.GetNowPlayingAsync())
+        _movieRepoMock.Setup(repo => repo.GetNowPlayingAsync(It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedMovies);
 
         var client = _factory.CreateClient();

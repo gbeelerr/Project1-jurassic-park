@@ -1,21 +1,81 @@
 .navbar-brand {
     font-size: 1.1rem;
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
 }
 
 .navbar > .container-fluid {
     position: relative;
-    justify-content: center;
     min-height: 3.5rem;
 }
 
-.navbar-nav {
+.nav-links {
     margin: 0;
+}
+
+.account-action {
+    width: fit-content;
+}
+
+.navbar ::deep .account-btn {
+    border-radius: 0.35rem;
+    min-height: 2.25rem;
+    padding: 0.35rem 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
 }
 
 .navbar ::deep .nav-link.active {
     font-weight: 600;
+}
+
+@media (max-width: 991.98px) {
+    .navbar-brand {
+        position: static;
+        transform: none;
+    }
+
+    .navbar ::deep .navbar-toggler {
+        margin-left: auto;
+    }
+
+    .navbar ::deep .navbar-collapse {
+        margin-top: 0.6rem;
+    }
+
+    .nav-links {
+        align-items: flex-start;
+    }
+
+    .account-action-mobile {
+        margin-left: 0.5rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .navbar-brand {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .navbar > .container-fluid {
+        justify-content: center;
+    }
+
+    .navbar ::deep .navbar-collapse {
+        flex-grow: 0;
+        justify-content: center;
+    }
+
+    .nav-links {
+        justify-content: center;
+    }
+
+    .account-action-desktop {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
 }

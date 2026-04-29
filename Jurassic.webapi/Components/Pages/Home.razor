@@ -2,14 +2,12 @@
 @using BlazorApp1.Models
 @using System.Net.Http.Json
 @using System.Linq
+@implements IAsyncDisposable
 @inject HttpClient Http
 
 <PageTitle>Home</PageTitle>
 
 <div class="container py-5 home-page d-flex flex-column">
-    <div class="d-flex flex-wrap justify-content-end align-items-center gap-2 mb-3 px-2">
-        <a class="btn btn-outline-primary fw-semibold" href="/account">Sign in or create account</a>
-    </div>
     <div class="text-center mb-4 home-title">
         <h1 class="display-4 fw-bold text-primary mb-0">Jurassic Park Cinema</h1>
     </div>
@@ -37,7 +35,10 @@
     }
     else
     {
-        <div id="moviePosterCarousel" class="carousel slide poster-carousel-shell">
+        <div id="moviePosterCarouselDesktop"
+             class="carousel slide poster-carousel-shell d-none d-md-block @(_desktopSlideForward ? "slide-forward" : "slide-back")"
+             @onmouseenter="OnDesktopMouseEnter"
+             @onmouseleave="OnDesktopMouseLeave">
             <div class="carousel-indicators">
                 @for (var i = 0; i < movieSlides.Count; i++)
                 {
@@ -48,27 +49,6 @@
                             @onclick="() => GoToSlide(i)"></button>
                 }
             </div>
-
-            @if (movieSlides.Count > 1)
-            {
-                <button class="carousel-peek carousel-peek-start d-none d-md-flex"
-                        type="button"
-                        @onclick="PreviousSlide"
-                        aria-label="Show previous slide">
-                    <img src="@GetPreviousSlidePreviewPoster()"
-                         alt="Previous movie preview"
-                         class="peek-image" />
-                </button>
-
-                <button class="carousel-peek carousel-peek-end d-none d-md-flex"
-                        type="button"
-                        @onclick="NextSlide"
-                        aria-label="Show next slide">
-                    <img src="@GetNextSlidePreviewPoster()"
-                         alt="Next movie preview"
-                         class="peek-image" />
-                </button>
-            }
 
             <div class="carousel-inner">
                 @for (var i = 0; i < movieSlides.Count; i++)
@@ -100,26 +80,70 @@
                 <span class="visually-hidden">Next</span>
             </button>
         </div>
-    }
-</div>
 
-<div class="fixed-bottom d-flex justify-content-center pb-4">
-    <a class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow" href="/now-playing">
-        Get Tickets
-    </a>
+        <div id="moviePosterCarouselMobile"
+             class="carousel slide poster-carousel-shell-mobile d-md-none @(_mobileSlideForward ? "slide-forward" : "slide-back")"
+             @onmouseenter="OnMobileMouseEnter"
+             @onmouseleave="OnMobileMouseLeave">
+            <div class="carousel-indicators">
+                @for (var i = 0; i < mobileMovies.Count; i++)
+                {
+                    <button type="button"
+                            class="@(i == activeMobileSlideIndex ? "active" : null)"
+                            aria-current="@(i == activeMobileSlideIndex ? "true" : null)"
+                            aria-label="@($"Slide {i + 1}")"
+                            @onclick="() => GoToMobileSlide(i)"></button>
+                }
+            </div>
+
+            <div class="carousel-inner">
+                @for (var i = 0; i < mobileMovies.Count; i++)
+                {
+                    var movie = mobileMovies[i];
+                    <div class="carousel-item @(i == activeMobileSlideIndex ? "active" : null)">
+                        <div class="row g-4 justify-content-center px-2">
+                            <div class="col-12 d-flex">
+                                <div class="w-100 d-flex flex-column align-items-center">
+                                    <img src="@movie.PosterUrl"
+                                         class="d-block poster-image"
+                                         alt="@($"{movie.Title} poster")" />
+                                    <h5 class="mt-3 mb-0 text-center fw-semibold">@movie.Title</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <button class="carousel-control-prev" type="button" @onclick="PreviousMobileSlide">
+                <span class="carousel-control-prev-icon carousel-nav-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" @onclick="NextMobileSlide">
+                <span class="carousel-control-next-icon carousel-nav-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+    }
+    <div class="d-flex justify-content-center mt-4 mb-2">
+        <a class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow" href="/now-playing">
+            Get Tickets
+        </a>
+    </div>
 </div>
 
 <style>
     .home-page {
-        min-height: 100vh;
-        padding-bottom: 8rem;
+        min-height: calc(100vh - 3.5rem);
+        padding-bottom: 2rem;
     }
 
     .home-title {
         margin-top: 0.5rem;
     }
 
-    .home-page > #moviePosterCarousel {
+    .home-page > #moviePosterCarouselDesktop,
+    .home-page > #moviePosterCarouselMobile {
         margin-top: auto;
         margin-bottom: auto;
     }
@@ -133,7 +157,8 @@
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
     }
 
-    #moviePosterCarousel .carousel-indicators [data-bs-target] {
+    #moviePosterCarouselDesktop .carousel-indicators button,
+    #moviePosterCarouselMobile .carousel-indicators button {
         background-color: #1f2937;
         width: 10px;
         height: 10px;
@@ -142,7 +167,8 @@
         opacity: 0.55;
     }
 
-    #moviePosterCarousel .carousel-indicators .active {
+    #moviePosterCarouselDesktop .carousel-indicators .active,
+    #moviePosterCarouselMobile .carousel-indicators .active {
         opacity: 1;
         background-color: #0d6efd;
     }
@@ -158,46 +184,58 @@
         padding-inline: 2.75rem;
     }
 
-    .carousel-peek {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 78px;
-        height: 130px;
-        border: 0;
-        border-radius: 0.5rem;
-        padding: 0;
-        background: transparent;
-        z-index: 4;
-        overflow: hidden;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.25);
-        opacity: 0.85;
+    .poster-carousel-shell-mobile {
+        padding-inline: 0.25rem;
     }
 
-    .carousel-peek:hover {
-        opacity: 1;
+    #moviePosterCarouselDesktop.slide-forward .carousel-item.active,
+    #moviePosterCarouselMobile.slide-forward .carousel-item.active {
+        animation: slideInFromRight 420ms ease-out;
     }
 
-    .carousel-peek-start {
-        left: 0.25rem;
+    #moviePosterCarouselDesktop.slide-back .carousel-item.active,
+    #moviePosterCarouselMobile.slide-back .carousel-item.active {
+        animation: slideInFromLeft 420ms ease-out;
     }
 
-    .carousel-peek-end {
-        right: 0.25rem;
+    @@keyframes slideInFromRight {
+        from {
+            opacity: 0.6;
+            transform: translateX(24px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
     }
 
-    .peek-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+    @@keyframes slideInFromLeft {
+        from {
+            opacity: 0.6;
+            transform: translateX(-24px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
     }
 </style>
 
 @code {
+    private const int AutoSlideIntervalSeconds = 10;
     private List<Movie>? movies;
+    private List<Movie> mobileMovies = new();
     private List<List<Movie>> movieSlides = new();
     private int activeSlideIndex;
+    private int activeMobileSlideIndex;
     private bool _isError;
+    private bool _desktopSlideForward = true;
+    private bool _mobileSlideForward = true;
+    private bool _desktopHovered;
+    private bool _mobileHovered;
+    private DateTime _lastUserInteractionUtc = DateTime.UtcNow;
+    private DateTime _lastAutoAdvanceUtc = DateTime.UtcNow;
+    private CancellationTokenSource? _autoSlideCts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -208,17 +246,24 @@
                 .Where(movie => !string.IsNullOrWhiteSpace(movie.PosterUrl))
                 .ToList();
 
-            movieSlides = linkedMovies
-                .Select((movie, index) => new { movie, index })
-                .GroupBy(x => x.index / 3)
-                .Select(group => group.Select(x => x.movie).ToList())
-                .ToList();
+            mobileMovies = linkedMovies;
+            movieSlides = BuildDesktopSlides(linkedMovies);
         }
         catch (Exception ex)
         {
             _isError = true;
             Console.WriteLine($"Error fetching movie posters: {ex.Message}");
         }
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isError)
+        {
+            StartAutoSlideLoop();
+        }
+
+        return Task.CompletedTask;
     }
 
     private void PreviousSlide()
@@ -228,6 +273,8 @@
             return;
         }
 
+        _desktopSlideForward = false;
+        RegisterUserInteraction();
         activeSlideIndex = (activeSlideIndex - 1 + movieSlides.Count) % movieSlides.Count;
     }
 
@@ -238,29 +285,9 @@
             return;
         }
 
+        _desktopSlideForward = true;
+        RegisterUserInteraction();
         activeSlideIndex = (activeSlideIndex + 1) % movieSlides.Count;
-    }
-
-    private string GetPreviousSlidePreviewPoster()
-    {
-        if (movieSlides.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var previousIndex = (activeSlideIndex - 1 + movieSlides.Count) % movieSlides.Count;
-        return movieSlides[previousIndex].Last().PosterUrl;
-    }
-
-    private string GetNextSlidePreviewPoster()
-    {
-        if (movieSlides.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var nextIndex = (activeSlideIndex + 1) % movieSlides.Count;
-        return movieSlides[nextIndex].First().PosterUrl;
     }
 
     private void GoToSlide(int index)
@@ -270,6 +297,170 @@
             return;
         }
 
+        _desktopSlideForward = index >= activeSlideIndex;
+        RegisterUserInteraction();
         activeSlideIndex = index;
+    }
+
+    private void PreviousMobileSlide()
+    {
+        if (mobileMovies.Count == 0)
+        {
+            return;
+        }
+
+        _mobileSlideForward = false;
+        RegisterUserInteraction();
+        activeMobileSlideIndex = (activeMobileSlideIndex - 1 + mobileMovies.Count) % mobileMovies.Count;
+    }
+
+    private void NextMobileSlide()
+    {
+        if (mobileMovies.Count == 0)
+        {
+            return;
+        }
+
+        _mobileSlideForward = true;
+        RegisterUserInteraction();
+        activeMobileSlideIndex = (activeMobileSlideIndex + 1) % mobileMovies.Count;
+    }
+
+    private void GoToMobileSlide(int index)
+    {
+        if (index < 0 || index >= mobileMovies.Count)
+        {
+            return;
+        }
+
+        _mobileSlideForward = index >= activeMobileSlideIndex;
+        RegisterUserInteraction();
+        activeMobileSlideIndex = index;
+    }
+
+    private static List<List<Movie>> BuildDesktopSlides(List<Movie> source)
+    {
+        if (source.Count == 0)
+        {
+            return new List<List<Movie>>();
+        }
+
+        var windowSize = Math.Min(3, source.Count);
+        var windows = new List<List<Movie>>(source.Count);
+
+        for (var i = 0; i < source.Count; i++)
+        {
+            var window = new List<Movie>(windowSize);
+            for (var offset = 0; offset < windowSize; offset++)
+            {
+                window.Add(source[(i + offset) % source.Count]);
+            }
+
+            windows.Add(window);
+        }
+
+        return windows;
+    }
+
+    private void StartAutoSlideLoop()
+    {
+        _autoSlideCts = new CancellationTokenSource();
+        _ = Task.Run(() => AutoSlideLoopAsync(_autoSlideCts.Token));
+    }
+
+    private async Task AutoSlideLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (!ShouldAutoAdvance())
+                {
+                    continue;
+                }
+
+                await InvokeAsync(() =>
+                {
+                    AdvanceDesktopAuto();
+                    AdvanceMobileAuto();
+                    _lastAutoAdvanceUtc = DateTime.UtcNow;
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Component disposed or loop cancelled.
+        }
+    }
+
+    private bool ShouldAutoAdvance()
+    {
+        if (_desktopHovered || _mobileHovered)
+        {
+            return false;
+        }
+
+        var now = DateTime.UtcNow;
+        return (now - _lastUserInteractionUtc).TotalSeconds >= AutoSlideIntervalSeconds
+            && (now - _lastAutoAdvanceUtc).TotalSeconds >= AutoSlideIntervalSeconds;
+    }
+
+    private void AdvanceDesktopAuto()
+    {
+        if (movieSlides.Count == 0)
+        {
+            return;
+        }
+
+        _desktopSlideForward = true;
+        activeSlideIndex = (activeSlideIndex + 1) % movieSlides.Count;
+    }
+
+    private void AdvanceMobileAuto()
+    {
+        if (mobileMovies.Count == 0)
+        {
+            return;
+        }
+
+        _mobileSlideForward = true;
+        activeMobileSlideIndex = (activeMobileSlideIndex + 1) % mobileMovies.Count;
+    }
+
+    private void RegisterUserInteraction()
+    {
+        _lastUserInteractionUtc = DateTime.UtcNow;
+    }
+
+    private void OnDesktopMouseEnter()
+    {
+        _desktopHovered = true;
+    }
+
+    private void OnDesktopMouseLeave()
+    {
+        _desktopHovered = false;
+        RegisterUserInteraction();
+    }
+
+    private void OnMobileMouseEnter()
+    {
+        _mobileHovered = true;
+    }
+
+    private void OnMobileMouseLeave()
+    {
+        _mobileHovered = false;
+        RegisterUserInteraction();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _autoSlideCts?.Cancel();
+        _autoSlideCts?.Dispose();
+        return ValueTask.CompletedTask;
     }
 }

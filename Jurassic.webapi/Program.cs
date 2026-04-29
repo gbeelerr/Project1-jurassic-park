@@ -1,4 +1,5 @@
 using BlazorApp1.Components;
+using BlazorApp1.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,7 @@ builder.Services.AddScoped(sp =>
     var baseUrl = configuration["MovieApi:BaseUrl"]?.TrimEnd('/') ?? "http://localhost:5080";
     return new HttpClient { BaseAddress = new Uri(baseUrl + "/", UriKind.Absolute) };
 });
+builder.Services.AddScoped<UserSession>();
 
 var app = builder.Build();
 

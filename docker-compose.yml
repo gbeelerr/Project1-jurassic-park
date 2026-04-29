@@ -11,6 +11,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: "Host=postgres;Database=jurassic_api;Username=jurassic;Password=jurassic_dev"
+      ConnectionStrings__WebConnection: "Host=postgres;Database=jurassic_web;Username=jurassic;Password=jurassic_dev"
+      Auth__JwtSigningKey: "docker-dev-only-change-in-production-min-32-chars!"
 
   web:
     build:

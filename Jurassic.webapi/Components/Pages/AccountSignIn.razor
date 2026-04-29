@@ -1,0 +1,189 @@
+@page "/account"
+@using System.Net
+@using System.Net.Http.Json
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject UserSession Session
+
+<PageTitle>Sign in</PageTitle>
+
+<div class="container py-5" style="max-width: 520px;">
+    <h1 class="h2 fw-bold text-primary mb-4">Sign in or create an account</h1>
+
+    <ul class="nav nav-pills nav-fill mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button type="button" class="nav-link @(_tab == Tab.SignIn ? "active" : null)" @onclick="() => _tab = Tab.SignIn">Sign in</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button type="button" class="nav-link @(_tab == Tab.SignUp ? "active" : null)" @onclick="() => _tab = Tab.SignUp">Create account</button>
+        </li>
+    </ul>
+
+    @if (_tab == Tab.SignIn)
+    {
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <p class="text-muted small mb-3">Use the email and password for your account. Demo user is seeded when the database is empty (see README).</p>
+                @if (!string.IsNullOrEmpty(_signInError))
+                {
+                    <div class="alert alert-danger py-2 small" role="alert">@_signInError</div>
+                }
+                <div class="mb-3">
+                    <label class="form-label" for="signInEmail">Email</label>
+                    <input id="signInEmail" type="email" class="form-control" @bind="_signInEmail" autocomplete="username" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="signInPassword">Password</label>
+                    <input id="signInPassword" type="password" class="form-control" @bind="_signInPassword" autocomplete="current-password" />
+                </div>
+                <button type="button" class="btn btn-primary w-100" disabled="@_busy" @onclick="SignInAsync">
+                    @(_busy ? "Signing in…" : "Sign in")
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <p class="text-muted small mb-3">Password must be at least 8 characters.</p>
+                @if (!string.IsNullOrEmpty(_signUpError))
+                {
+                    <div class="alert alert-danger py-2 small" role="alert">@_signUpError</div>
+                }
+                @if (!string.IsNullOrEmpty(_signUpSuccess))
+                {
+                    <div class="alert alert-success py-2 small" role="alert">@_signUpSuccess</div>
+                }
+                <div class="mb-3">
+                    <label class="form-label" for="signUpEmail">Email</label>
+                    <input id="signUpEmail" type="email" class="form-control" @bind="_signUpEmail" autocomplete="username" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="signUpDisplayName">Display name (optional)</label>
+                    <input id="signUpDisplayName" type="text" class="form-control" @bind="_signUpDisplayName" autocomplete="name" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="signUpPassword">Password</label>
+                    <input id="signUpPassword" type="password" class="form-control" @bind="_signUpPassword" autocomplete="new-password" />
+                </div>
+                <button type="button" class="btn btn-primary w-100" disabled="@_busy" @onclick="SignUpAsync">
+                    @(_busy ? "Creating account…" : "Create account")
+                </button>
+            </div>
+        </div>
+    }
+
+    <div class="mt-4 text-center">
+        <a href="/">Back to home</a>
+    </div>
+</div>
+
+@code {
+    private enum Tab { SignIn, SignUp }
+
+    private Tab _tab = Tab.SignIn;
+    private bool _busy;
+
+    private string _signInEmail = "";
+    private string _signInPassword = "";
+    private string? _signInError;
+
+    private string _signUpEmail = "";
+    private string _signUpPassword = "";
+    private string _signUpDisplayName = "";
+    private string? _signUpError;
+    private string? _signUpSuccess;
+
+    private async Task SignInAsync()
+    {
+        _signInError = null;
+        _busy = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("auth/login", new { email = _signInEmail, password = _signInPassword });
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                _signInError = "Invalid email or password.";
+                return;
+            }
+
+            response.EnsureSuccessStatusCode();
+            var payload = await response.Content.ReadFromJsonAsync<AuthLoginResponse>();
+            if (payload is null || string.IsNullOrEmpty(payload.AccessToken))
+            {
+                _signInError = "Unexpected response from server.";
+                return;
+            }
+
+            Session.Email = _signInEmail.Trim();
+            Session.AccessToken = payload.AccessToken;
+            Session.RefreshToken = payload.RefreshToken;
+            Nav.NavigateTo("/now-playing");
+        }
+        catch (Exception ex)
+        {
+            _signInError = $"Could not sign in: {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task SignUpAsync()
+    {
+        _signUpError = null;
+        _signUpSuccess = null;
+        _busy = true;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_signUpPassword) || _signUpPassword.Length < 8)
+            {
+                _signUpError = "Password must be at least 8 characters.";
+                return;
+            }
+
+            var body = new
+            {
+                email = _signUpEmail,
+                password = _signUpPassword,
+                display_name = string.IsNullOrWhiteSpace(_signUpDisplayName) ? null : _signUpDisplayName.Trim()
+            };
+
+            var response = await Http.PostAsJsonAsync("auth/register", body);
+            if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                _signUpError = "That email is already registered.";
+                return;
+            }
+
+            if (response.StatusCode == HttpStatusCode.BadRequest)
+            {
+                _signUpError = "Please check your email and password and try again.";
+                return;
+            }
+
+            response.EnsureSuccessStatusCode();
+            var created = await response.Content.ReadFromJsonAsync<AuthRegisterResponse>();
+            _signUpSuccess = created is null
+                ? "Account created. You can sign in now."
+                : $"Account created for {created.Email}. You can sign in now.";
+            _tab = Tab.SignIn;
+            _signInEmail = _signUpEmail.Trim();
+            _signInPassword = "";
+        }
+        catch (Exception ex)
+        {
+            _signUpError = $"Could not create account: {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

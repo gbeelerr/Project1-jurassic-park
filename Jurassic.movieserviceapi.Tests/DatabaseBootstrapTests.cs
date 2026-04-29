@@ -7,7 +7,14 @@ public class DatabaseBootstrapTests
     [Fact]
     public void BootstrapScript_ShouldSeedShowtimesRelativeToCurrentDate()
     {
-        var solutionRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Jurassic.sln")))
+        {
+            dir = dir.Parent;
+        }
+
+        var solutionRoot = dir?.FullName
+                           ?? throw new InvalidOperationException("Could not locate Jurassic.sln from test output directory.");
         var scriptPath = Path.Combine(solutionRoot, "Jurassic.movieserviceapi", "Data", "bootstrap.sql");
 
         File.Exists(scriptPath).Should().BeTrue("the movieservice bootstrap script should be present in source control");

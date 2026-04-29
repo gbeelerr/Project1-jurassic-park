@@ -1,39 +1,30 @@
 using System.Security.Cryptography;
+using Jurassic.movieserviceapi.Diagnostics;
+using Jurassic.movieserviceapi.HealthChecks;
 using Jurassic.movieserviceapi.Models;
 using Jurassic.movieserviceapi.Options;
 using Jurassic.movieserviceapi.Repositories;
 using Jurassic.movieserviceapi.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
-    .AddCheck("Database", () =>
-    {
-        try
-        {
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-            using var connection = new NpgsqlConnection(connectionString);
-            connection.Open();
-            return HealthCheckResult.Healthy();
-        }
-        catch (Exception ex)
-        {
-            return HealthCheckResult.Unhealthy("Database connection failed", ex);
-        }
-    });
+    .AddCheck<PostgresPrimaryHealthCheck>("postgres-primary");
+
+builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
+
 builder.Services.AddScoped<IMovieRepository, MovieRepository>();
 builder.Services.AddSingleton<DatabaseBootstrapper>();
-builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
-builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
-builder.Services.AddSingleton<PasswordHasher<WebUser>>();
-builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddSingleton<WebAuthSeeder>();
+builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddSingleton<IPasswordHasher<WebUser>, PasswordHasher<WebUser>>();
 
 builder.Services.AddCors(options =>
 {
@@ -54,19 +45,17 @@ if (builder.Configuration.GetValue("DatabaseBootstrap:Enabled", true))
     await bootstrapper.InitializeAsync();
 }
 
-if (builder.Configuration.GetValue("WebAuthSeed:Enabled", true))
+await using (var seedScope = app.Services.CreateAsyncScope())
 {
-    await using var scope = app.Services.CreateAsyncScope();
-    var webAuthSeeder = scope.ServiceProvider.GetRequiredService<WebAuthSeeder>();
-    await webAuthSeeder.SeedAsync();
+    await seedScope.ServiceProvider.GetRequiredService<WebAuthSeeder>().SeedAsync();
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
+app.UseExceptionHandler();
 app.UseCors("AllowWeb");
 
 app.MapHealthChecks("/api/health");
@@ -81,17 +70,11 @@ var movies = new[]
     new Movie(6, "Jurassic World Dominion", 147)
 };
 
-app.MapGet("/weatherforecast", () =>
-{
-    return new { message = "API is running" };
-});
+app.MapGet("/weatherforecast", () => new { message = "API is running" });
 
 app.MapGet("/movies", () => movies);
 
-app.MapGet("/movies/posters", async (IMovieRepository repo) =>
-{
-    return await repo.GetMoviePostersAsync();
-});
+app.MapGet("/movies/posters", async (IMovieRepository repo) => await repo.GetMoviePostersAsync());
 
 app.MapGet("/movies/now-playing", async (DateOnly? date, IMovieRepository repo) =>
 {
@@ -108,7 +91,7 @@ app.MapGet("/showtimes/{showtimeId:guid}", async (Guid showtimeId, IMovieReposit
 app.MapPost("/auth/register", async (
         RegisterRequest body,
         IAuthRepository authRepository,
-        PasswordHasher<WebUser> passwordHasher,
+        IPasswordHasher<WebUser> passwordHasher,
         CancellationToken cancellationToken) =>
     {
         if (string.IsNullOrWhiteSpace(body.Email) || string.IsNullOrWhiteSpace(body.Password))
@@ -141,7 +124,7 @@ app.MapPost("/auth/register", async (
 
         await authRepository.InsertUserAsync(userId, email, displayName, hash, cancellationToken);
 
-        return Results.Created($"/auth/me", new RegisterResponse { UserId = userId, Email = email });
+        return Results.Created("/auth/me", new RegisterResponse { UserId = userId, Email = email });
     })
     .WithName("AuthRegister");
 
@@ -149,7 +132,7 @@ app.MapPost("/auth/login", async (
         LoginRequest body,
         HttpContext http,
         IAuthRepository authRepository,
-        PasswordHasher<WebUser> passwordHasher,
+        IPasswordHasher<WebUser> passwordHasher,
         IJwtTokenService jwtTokenService,
         IOptions<AuthOptions> authOptions,
         CancellationToken cancellationToken) =>

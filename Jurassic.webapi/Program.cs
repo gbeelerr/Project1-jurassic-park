@@ -13,6 +13,8 @@ builder.Services.AddScoped(sp =>
     return new HttpClient { BaseAddress = new Uri(baseUrl + "/", UriKind.Absolute) };
 });
 
+builder.Services.AddScoped<BlazorApp1.Models.UserSession>();
+
 var app = builder.Build();
 
 var httpOnly = string.Equals(
@@ -45,3 +47,5 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+public partial class Program;

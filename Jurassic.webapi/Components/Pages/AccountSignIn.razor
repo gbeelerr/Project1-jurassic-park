@@ -1,0 +1,155 @@
+@page "/account"
+@rendermode InteractiveServer
+@using System.Net.Http.Json
+@using BlazorApp1.Models
+@inject HttpClient Http
+@inject UserSession UserSession
+@inject NavigationManager Nav
+
+<PageTitle>Account</PageTitle>
+
+<div class="container py-4" style="max-width: 480px;">
+    <h1 class="h3 mb-3">Sign in or create an account</h1>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success" role="alert">@_successMessage</div>
+    }
+
+    @if (UserSession.IsSignedIn)
+    {
+        <p class="text-muted mb-3">You are signed in as <strong>@UserSession.Email</strong>.</p>
+        <button type="button" class="btn btn-outline-secondary" @onclick="SignOut">Sign out</button>
+    }
+    else
+    {
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <button type="button" class="nav-link @(_tab == Tab.SignIn ? "active" : null)" @onclick="() => _tab = Tab.SignIn">Sign in</button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link @(_tab == Tab.Register ? "active" : null)" @onclick="() => _tab = Tab.Register">Register</button>
+            </li>
+        </ul>
+
+        @if (_tab == Tab.SignIn)
+        {
+            <EditForm Model="_signIn" OnValidSubmit="SubmitSignInAsync">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <InputText class="form-control" @bind-Value="_signIn.Email" autocomplete="username" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <InputText type="password" class="form-control" @bind-Value="_signIn.Password" autocomplete="current-password" />
+                </div>
+                <button type="submit" class="btn btn-primary" disabled="@_busy">@(_busy ? "Signing in…" : "Sign in")</button>
+            </EditForm>
+        }
+        else
+        {
+            <EditForm Model="_register" OnValidSubmit="SubmitRegisterAsync">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <InputText class="form-control" @bind-Value="_register.Email" autocomplete="username" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Display name (optional)</label>
+                    <InputText class="form-control" @bind-Value="_register.DisplayName" autocomplete="name" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <InputText type="password" class="form-control" @bind-Value="_register.Password" autocomplete="new-password" />
+                </div>
+                <button type="submit" class="btn btn-primary" disabled="@_busy">@(_busy ? "Creating account…" : "Create account")</button>
+            </EditForm>
+        }
+    }
+</div>
+
+@code {
+    private enum Tab { SignIn, Register }
+
+    private Tab _tab = Tab.SignIn;
+    private bool _busy;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    private readonly AuthLoginRequest _signIn = new();
+    private readonly AuthRegisterRequest _register = new();
+
+    private void SignOut()
+    {
+        UserSession.SignOut();
+        _successMessage = null;
+        _errorMessage = null;
+    }
+
+    private async Task SubmitSignInAsync()
+    {
+        _busy = true;
+        _errorMessage = null;
+        _successMessage = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("auth/login", _signIn);
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Sign-in failed. Check your email and password.";
+                return;
+            }
+
+            var body = await response.Content.ReadFromJsonAsync<AuthLoginResponse>();
+            UserSession.SetSignedIn(_signIn.Email.Trim(), body?.AccessToken);
+            _successMessage = "Signed in successfully.";
+        }
+        catch
+        {
+            _errorMessage = "Could not reach the server. Try again later.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task SubmitRegisterAsync()
+    {
+        _busy = true;
+        _errorMessage = null;
+        _successMessage = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("auth/register", _register);
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                _errorMessage = "An account with this email already exists.";
+                return;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Registration failed. Check your details and try again.";
+                return;
+            }
+
+            _successMessage = "Account created. You can sign in now.";
+            _tab = Tab.SignIn;
+            _signIn.Email = _register.Email;
+            _register.Password = "";
+        }
+        catch
+        {
+            _errorMessage = "Could not reach the server. Try again later.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

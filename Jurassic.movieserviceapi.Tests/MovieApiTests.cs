@@ -30,6 +30,11 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("DatabaseBootstrap:Enabled", "false");
+            builder.UseSetting("WebAuthSeed:Enabled", "false");
+            builder.UseSetting(
+                "ConnectionStrings:WebConnection",
+                "Host=127.0.0.1;Database=jurassic_web;Username=jurassic;Password=jurassic_dev");
+            builder.UseSetting("Auth:JwtSigningKey", "unit-test-jwt-signing-key-min-32-chars!!");
             builder.ConfigureServices(services =>
             {
                 // Remove the existing registration of IMovieRepository
@@ -45,7 +50,7 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
                 {
                     options.Registrations.Clear();
                     options.Registrations.Add(new HealthCheckRegistration(
-                        "Database",
+                        "postgres-primary",
                         _ => new AlwaysHealthyCheck(),
                         failureStatus: null,
                         tags: null));
@@ -77,7 +82,7 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
             )
         };
 
-        _movieRepoMock.Setup(repo => repo.GetNowPlayingAsync())
+        _movieRepoMock.Setup(repo => repo.GetNowPlayingAsync(It.IsAny<DateTime?>()))
             .ReturnsAsync(expectedMovies);
 
         var client = _factory.CreateClient();
@@ -91,6 +96,30 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
         actualMovies.Should().NotBeNull();
         actualMovies.Should().HaveCount(1);
         actualMovies![0].Title.Should().Be("Test Movie");
+    }
+
+    [Fact]
+    public async Task GetMoviePosters_ShouldReturnPosters_FromRepository()
+    {
+        var movieId = Guid.NewGuid();
+        var expected = new List<MoviePosterDto>
+        {
+            new(movieId, "Test Movie", "https://example.com/poster.jpg")
+        };
+
+        _movieRepoMock.Setup(repo => repo.GetMoviePostersAsync()).ReturnsAsync(expected);
+
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/movies/posters");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<MoviePosterDto>>();
+        body.Should().NotBeNull();
+        var posters = body!;
+        posters.Should().HaveCount(1);
+        posters[0].MovieId.Should().Be(movieId);
+        posters[0].Title.Should().Be("Test Movie");
     }
 
     [Fact]

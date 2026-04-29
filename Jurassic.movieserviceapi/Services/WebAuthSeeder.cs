@@ -20,6 +20,11 @@ public sealed class WebAuthSeeder
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
+        if (!_configuration.GetValue("WebAuthSeed:Enabled", true))
+        {
+            return;
+        }
+
         var connectionString = _configuration.GetConnectionString("WebConnection");
         if (string.IsNullOrWhiteSpace(connectionString))
         {

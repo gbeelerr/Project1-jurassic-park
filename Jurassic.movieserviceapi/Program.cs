@@ -128,6 +128,8 @@ app.MapPost("/auth/register", async (
     })
     .WithName("AuthRegister");
 
+// POST /auth/login: validate email/password against jurassic_web.users; on success issue JWT + refresh token
+// and insert jurassic_web.sessions; invalid credentials -> 401 Unauthorized.
 app.MapPost("/auth/login", async (
         LoginRequest body,
         HttpContext http,

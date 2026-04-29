@@ -4,6 +4,7 @@ using Npgsql;
 
 namespace Jurassic.movieserviceapi.Repositories;
 
+/// <summary>Uses <c>WebConnection</c> (jurassic_web) for <c>users</c> and <c>sessions</c> per webdb schema.</summary>
 public sealed class AuthRepository : IAuthRepository
 {
     private readonly string _connectionString;

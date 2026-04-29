@@ -60,19 +60,9 @@ app.UseCors("AllowWeb");
 
 app.MapHealthChecks("/api/health");
 
-var movies = new[]
-{
-    new Movie(1, "Jurassic Park", 127),
-    new Movie(2, "The Lost World: Jurassic Park", 129),
-    new Movie(3, "Jurassic Park III", 92),
-    new Movie(4, "Jurassic World", 124),
-    new Movie(5, "Jurassic World: Fallen Kingdom", 128),
-    new Movie(6, "Jurassic World Dominion", 147)
-};
-
 app.MapGet("/weatherforecast", () => new { message = "API is running" });
 
-app.MapGet("/movies", () => movies);
+app.MapGet("/movies", async (IMovieRepository repo) => await repo.GetMoviesAsync());
 
 app.MapGet("/movies/posters", async (IMovieRepository repo) => await repo.GetMoviePostersAsync());
 
@@ -193,5 +183,3 @@ app.MapPost("/auth/login", async (
 app.Run();
 
 public partial class Program { }
-
-record Movie(int Id, string Title, int Runtime);

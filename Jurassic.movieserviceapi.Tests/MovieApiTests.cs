@@ -136,18 +136,26 @@ public class MovieApiTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task GetMovies_StaticList_ShouldReturnAllMovies()
+    public async Task GetMovies_ShouldReturnMovies_FromRepository()
     {
-        // Arrange
+        var movieId = Guid.NewGuid();
+        var expected = new List<MovieListItemDto>
+        {
+            new(movieId, "Jurassic Park", 127, "PG-13", "now_showing")
+        };
+        _movieRepoMock.Setup(repo => repo.GetMoviesAsync()).ReturnsAsync(expected);
+
         var client = _factory.CreateClient();
 
-        // Act
         var response = await client.GetAsync("/movies");
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("Jurassic Park");
+        var body = await response.Content.ReadFromJsonAsync<List<MovieListItemDto>>();
+        body.Should().NotBeNull();
+        var movies = body!;
+        movies.Should().HaveCount(1);
+        movies[0].MovieId.Should().Be(movieId);
+        movies[0].Title.Should().Be("Jurassic Park");
     }
 
     [Fact]

@@ -1,11 +1,15 @@
 using System.Security.Cryptography;
+using System.Text;
 using Jurassic.movieserviceapi.Diagnostics;
 using Jurassic.movieserviceapi.HealthChecks;
+using Jurassic.movieserviceapi.Http;
 using Jurassic.movieserviceapi.Models;
 using Jurassic.movieserviceapi.Options;
 using Jurassic.movieserviceapi.Repositories;
 using Jurassic.movieserviceapi.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,7 +23,31 @@ builder.Services.AddHealthChecks()
 
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
 
+var jwtKey = builder.Configuration["Auth:JwtSigningKey"] ?? "";
+if (jwtKey.Length < 32)
+{
+    throw new InvalidOperationException("Auth:JwtSigningKey must be set and at least 32 characters for JWT.");
+}
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Auth:JwtIssuer"] ?? "jurassic-movieservice",
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Auth:JwtAudience"] ?? "jurassic-clients",
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromMinutes(5)
+    };
+});
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddScoped<IMovieRepository, MovieRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddSingleton<DatabaseBootstrapper>();
 builder.Services.AddSingleton<WebAuthSeeder>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
@@ -57,6 +85,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 app.UseCors("AllowWeb");
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapHealthChecks("/api/health");
 
@@ -77,6 +107,29 @@ app.MapGet("/showtimes/{showtimeId:guid}", async (Guid showtimeId, IMovieReposit
     var showtimeDetails = await repo.GetShowtimeDetailsAsync(showtimeId);
     return showtimeDetails is null ? Results.NotFound() : Results.Ok(showtimeDetails);
 });
+
+app.MapGet("/movies/{movieId:guid}/showtimes/{showtimeId:guid}/seats",
+        SeatReservationHandlers.GetSeatsForMovieShowtimeAsync)
+    .WithName("GetSeatsForMovieShowtime");
+
+app.MapGet("/showtimes/{showtimeId:guid}/seats", SeatReservationHandlers.GetSeatsForShowtimeAnonymousAsync)
+    .WithName("GetSeatsForShowtime");
+
+app.MapGet("/showtimes/{showtimeId:guid}/seat-availability", async (
+        Guid showtimeId,
+        IMovieRepository movieRepository,
+        IBookingRepository bookingRepository,
+        CancellationToken cancellationToken) =>
+    {
+        if (await movieRepository.GetShowtimeDetailsAsync(showtimeId) is null)
+        {
+            return Results.NotFound();
+        }
+
+        var labels = await bookingRepository.GetUnavailableSeatLabelsAsync(showtimeId, cancellationToken);
+        return Results.Ok(new SeatAvailabilityResponse { ShowtimeId = showtimeId, UnavailableSeatLabels = labels });
+    })
+    .WithName("ShowtimeSeatAvailability");
 
 app.MapPost("/auth/register", async (
         RegisterRequest body,
@@ -179,6 +232,18 @@ app.MapPost("/auth/login", async (
         });
     })
     .WithName("AuthLogin");
+
+app.MapGet("/me/bookings", UserBookingsHandlers.GetMyBookingsAsync)
+    .RequireAuthorization()
+    .WithName("GetMyBookings");
+
+app.MapPost("/movies/{movieId:guid}/showtimes/{showtimeId:guid}/reserve", SeatReservationHandlers.ReserveSeatsForMovieShowtimeAsync)
+    .RequireAuthorization()
+    .WithName("ReserveSeatsForMovieShowtime");
+
+app.MapPost("/checkout/confirm", SeatReservationHandlers.ReserveSeatsCheckoutStyleAsync)
+    .RequireAuthorization()
+    .WithName("CheckoutConfirm");
 
 app.Run();
 

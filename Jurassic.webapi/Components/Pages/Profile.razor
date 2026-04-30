@@ -1,0 +1,131 @@
+@page "/profile"
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using System.Globalization
+@using System.Net.Http.Json
+@rendermode InteractiveServer
+@inject UserSession Session
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<PageTitle>Profile</PageTitle>
+
+<div class="container py-4 pb-5" style="max-width: 720px;">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-4 flex-wrap border-bottom pb-3">
+        <div>
+            <h1 class="h2 fw-bold text-primary mb-1">Your profile</h1>
+            <p class="text-muted small mb-0">Signed in as <span class="text-dark fw-semibold">@(Session.Email ?? "guest")</span></p>
+        </div>
+        @if (Session.IsSignedIn)
+        {
+            <button type="button" class="btn btn-outline-secondary" @onclick="SignOutAsync">
+                Sign out
+            </button>
+        }
+    </div>
+
+    @if (!Session.IsSignedIn)
+    {
+        <div class="alert alert-info shadow-sm py-4" role="alert">
+            You are not signed in. Sign in to book seats or complete checkout.
+            <div class="mt-3"><a href="/account" class="btn btn-primary">Go to sign in</a></div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <h2 class="h5 fw-semibold mb-3">Your tickets</h2>
+                @if (_loading)
+                {
+                    <div class="text-center py-4"><span class="spinner-border text-primary" role="status"></span></div>
+                }
+                else if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="alert alert-warning small mb-0">@_error</div>
+                }
+                else if (_bookings.Count == 0)
+                {
+                    <p class="text-muted mb-3">No confirmed bookings yet. Choose a showtime under Now Playing, then complete checkout.</p>
+                    <a href="/now-playing" class="btn btn-primary">Now playing</a>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var b in _bookings)
+                        {
+                            <li class="list-group-item px-0 py-3">
+                                <div class="fw-semibold">@b.MovieTitle</div>
+                                <div class="small text-muted">@FormatStartsAt(b.StartsAt)</div>
+                                <div class="small mt-1">Seats: <span class="font-monospace">@string.Join(", ", b.SeatLabels)</span></div>
+                            </li>
+                        }
+                    </ul>
+                    <div class="mt-3 pt-3 border-top">
+                        <a href="/now-playing" class="btn btn-primary me-2">More showtimes</a>
+                        <a href="/checkout" class="btn btn-outline-primary">Checkout</a>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<MyBookingItemDto> _bookings = new();
+    private bool _loading;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBookingsAsync();
+    }
+
+    private async Task LoadBookingsAsync()
+    {
+        if (!Session.IsSignedIn)
+        {
+            _bookings.Clear();
+            return;
+        }
+
+        _loading = true;
+        _error = null;
+        try
+        {
+            var list = await Http.GetFromJsonAsync<List<MyBookingItemDto>>("me/bookings");
+            _bookings = list ?? [];
+        }
+        catch
+        {
+            _bookings.Clear();
+            _error = "We could not load your bookings.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SignOutAsync()
+    {
+        Session.Email = null;
+        Session.AccessToken = null;
+        Session.RefreshToken = null;
+        Session.ReturnAfterSignIn = null;
+        _bookings.Clear();
+        Session.NotifyChanged();
+        Nav.NavigateTo("/", forceLoad: false);
+    }
+
+    private static string FormatStartsAt(DateTime dt)
+    {
+        var utc = dt.Kind switch
+        {
+            DateTimeKind.Utc => dt,
+            DateTimeKind.Local => dt.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
+        };
+        return utc.ToLocalTime().ToString("ddd, M/d • h:mm tt", CultureInfo.InvariantCulture);
+    }
+}

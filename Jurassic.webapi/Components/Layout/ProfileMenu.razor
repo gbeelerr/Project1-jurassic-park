@@ -1,0 +1,162 @@
+@using BlazorApp1.Models
+@using BlazorApp1.Services
+@using System.Globalization
+@using System.Net.Http.Json
+@inject UserSession Session
+@inject HttpClient Http
+@inject NavigationManager Nav
+@implements IDisposable
+
+@if (!Session.IsSignedIn)
+{
+    <NavLink class="@SignedOutButtonClass" href="/account">Sign in or create account</NavLink>
+}
+else
+{
+    <div class="@DropdownWrapperClass">
+        <button class="btn btn-outline-light dropdown-toggle account-btn" type="button" data-bs-toggle="dropdown"
+                aria-expanded="false"
+                @onclick="RefreshBookingsAsync">
+            Profile
+        </button>
+        <ul class="@DropdownMenuClass">
+            <li class="px-3 py-3 border-bottom bg-light rounded-top">
+                <div class="small text-muted text-uppercase fw-semibold mb-1">Signed in</div>
+                <div class="fw-semibold text-truncate" title="@Session.Email">@(Session.Email ?? "Guest")</div>
+            </li>
+            <li class="px-3 py-3">
+                <div class="small text-uppercase text-muted fw-semibold mb-2">Your tickets</div>
+                @if (_loading)
+                {
+                    <div class="text-center py-2">
+                        <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="small text-danger">@_error</div>
+                }
+                else if (_bookings.Count == 0)
+                {
+                    <div class="small text-muted">No bookings yet. Pick a showtime under Now Playing.</div>
+                }
+                else
+                {
+                    @foreach (var b in _bookings)
+                    {
+                        <div class="booking-snippet pb-3 mb-3 border-bottom">
+                            <div class="fw-semibold small">@b.MovieTitle</div>
+                            <div class="text-muted small mb-1">@FormatStartsAt(b.StartsAt)</div>
+                            <div class="small mb-0">Seats: <span class="font-monospace">@string.Join(", ", b.SeatLabels)</span></div>
+                        </div>
+                    }
+                }
+            </li>
+            <li>
+                <hr class="dropdown-divider my-0"/>
+            </li>
+            <li><a class="dropdown-item py-2" href="/profile">Account &amp; details</a></li>
+            <li>
+                <button type="button" class="dropdown-item py-2 text-danger w-100 text-start border-0 bg-transparent" @onclick="SignOutAsync">
+                    Sign out
+                </button>
+            </li>
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    private bool ShouldFullWidth => CssClass?.Contains("w-100", StringComparison.OrdinalIgnoreCase) == true;
+
+    private string SignedOutButtonClass =>
+        string.IsNullOrWhiteSpace(CssClass)
+            ? "btn btn-outline-light account-btn"
+            : $"btn btn-outline-light account-btn {CssClass.Trim()}";
+
+    private string DropdownWrapperClass =>
+        string.IsNullOrWhiteSpace(CssClass) ? "dropdown" : $"dropdown {CssClass.Trim()}";
+
+    private string DropdownMenuClass =>
+        ShouldFullWidth
+            ? "dropdown-menu dropdown-menu-end shadow border-0 py-0 profile-menu-panel w-100"
+            : "dropdown-menu dropdown-menu-end shadow border-0 py-0 profile-menu-panel";
+
+    private List<MyBookingItemDto> _bookings = new();
+    private bool _loading;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnSessionChanged;
+        await LoadBookingsAsync();
+    }
+
+    private void OnSessionChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await LoadBookingsAsync();
+            StateHasChanged();
+        });
+    }
+
+    private Task RefreshBookingsAsync() => LoadBookingsAsync();
+
+    private async Task LoadBookingsAsync()
+    {
+        if (!Session.IsSignedIn)
+        {
+            _bookings.Clear();
+            _loading = false;
+            _error = null;
+            return;
+        }
+
+        _loading = true;
+        _error = null;
+        try
+        {
+            var list = await Http.GetFromJsonAsync<List<MyBookingItemDto>>("me/bookings");
+            _bookings = list ?? new List<MyBookingItemDto>();
+        }
+        catch
+        {
+            _bookings.Clear();
+            _error = "Could not load bookings.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SignOutAsync()
+    {
+        Session.Email = null;
+        Session.AccessToken = null;
+        Session.RefreshToken = null;
+        Session.ReturnAfterSignIn = null;
+        _bookings.Clear();
+        Session.NotifyChanged();
+        Nav.NavigateTo("/", forceLoad: false);
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnSessionChanged;
+    }
+
+    private static string FormatStartsAt(DateTime dt)
+    {
+        var utc = dt.Kind switch
+        {
+            DateTimeKind.Utc => dt,
+            DateTimeKind.Local => dt.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
+        };
+        return utc.ToLocalTime().ToString("ddd, M/d • h:mm tt", CultureInfo.InvariantCulture);
+    }
+}

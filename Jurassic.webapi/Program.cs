@@ -7,13 +7,30 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddScoped(sp =>
+builder.Services.AddScoped<UserSession>();
+
+// Blazor Server: UserSession is scoped per circuit. IHttpClientFactory wires message handlers from the
+// application root DI scope, so a delegating handler registered there gets a different UserSession than
+// components—requests go out without a Bearer token while the UI still appears signed in. Build one
+// HttpClient per scope so MovieApiAuthHeaderHandler shares the same UserSession instance.
+builder.Services.AddScoped(static sp =>
 {
     var configuration = sp.GetRequiredService<IConfiguration>();
     var baseUrl = configuration["MovieApi:BaseUrl"]?.TrimEnd('/') ?? "http://localhost:5080";
-    return new HttpClient { BaseAddress = new Uri(baseUrl + "/", UriKind.Absolute) };
+    var session = sp.GetRequiredService<UserSession>();
+
+    var innerHandler = new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+    };
+
+    var authHandler = new MovieApiAuthHeaderHandler(session) { InnerHandler = innerHandler };
+
+    return new HttpClient(authHandler, disposeHandler: true)
+    {
+        BaseAddress = new Uri($"{baseUrl}/", UriKind.Absolute),
+    };
 });
-builder.Services.AddScoped<UserSession>();
 
 var app = builder.Build();
 

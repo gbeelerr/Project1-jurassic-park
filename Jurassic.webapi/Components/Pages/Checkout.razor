@@ -1,29 +1,281 @@
 @page "/checkout"
+@using BlazorApp1.Models
 @using BlazorApp1.Services
+@using System.Globalization
+@using System.Net
+@using System.Net.Http.Json
+@inject HttpClient Http
 @inject NavigationManager Nav
 @inject UserSession Session
+@rendermode InteractiveServer
 
 <PageTitle>Checkout</PageTitle>
 
 <div class="container mt-4 pb-5">
-    <h1 class="mb-3">Checkout</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <h1 class="h2 fw-bold text-primary mb-0">Checkout</h1>
+        <button type="button" class="btn btn-outline-secondary" @onclick="GoHome">Home</button>
+    </div>
 
     @if (!Session.IsSignedIn)
     {
-        <p class="text-muted mb-4">Sign in to continue with your booking.</p>
-        <a class="btn btn-primary me-2" href="/account">Sign in</a>
+        <p class="text-muted mb-4">Sign in to confirm your seats. No real payment runs in this school demo—the total is informational only.</p>
+        <button type="button" class="btn btn-primary me-2" @onclick="BeginSignIn">Sign in</button>
         <button type="button" class="btn btn-secondary" @onclick="GoHome">Back to Home</button>
+    }
+    else if (!_hasSelections)
+    {
+        <div class="alert alert-warning shadow-sm">
+            Nothing to check out yet. From <strong>Now Playing</strong>, pick a movie and showtime, choose seats, then click <strong>Continue to Checkout</strong>.
+        </div>
+        <a class="btn btn-primary" href="/now-playing">Now playing</a>
     }
     else
     {
-        <p class="text-muted mb-4">This checkout flow is under construction. Thanks for your patience.</p>
-        <button type="button" class="btn btn-secondary" @onclick="GoHome">Back to Home</button>
+        <div class="alert alert-info py-3 small mb-4" role="status">
+            <strong>School demo.</strong> No card or gateway is contacted. Choosing <strong>Confirm booking</strong> records seats in our database so they stay unavailable for everyone.
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="alert alert-danger small" role="alert">@_error</div>
+        }
+        @if (_successBookingId.HasValue)
+        {
+            <div class="alert alert-success small mb-4" role="status">
+                Booking confirmed. Reference: <code>@_successBookingId</code>
+            </div>
+        }
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body p-4">
+                        <div class="text-uppercase text-muted fw-semibold small mb-3">Booking details</div>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Movie</dt>
+                            <dd class="col-sm-8">@MovieDisplay</dd>
+                            <dt class="col-sm-4">Showtime</dt>
+                            <dd class="col-sm-8">@ShowtimeDisplay</dd>
+                            <dt class="col-sm-4">Seats (@SeatList.Count)</dt>
+                            <dd class="col-sm-8">@SeatSummary</dd>
+                            <dt class="col-sm-4">Price / seat</dt>
+                            <dd class="col-sm-8">@FormatUsd(UnitPriceComputed)</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="card shadow-sm border-0 sticky-top" style="top: 6rem;">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted fw-semibold">Estimated total</span>
+                            <span class="display-6 fw-bold text-primary">@FormatUsd(TotalComputed)</span>
+                        </div>
+                        <p class="small text-muted mb-4">For display only—not charged.</p>
+                        <button type="button" class="btn btn-success w-100" disabled="@_busy" @onclick="ConfirmAsync">
+                            @(_busy ? "Saving…" : "Confirm booking (demo)")
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-2" @onclick="GoSeatMap">
+                            Back to seats
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
 </div>
 
 @code {
-    private void GoHome()
+    private static readonly CultureInfo UsCulture = CultureInfo.GetCultureInfo("en-US");
+
+    [SupplyParameterFromQuery]
+    public Guid? MovieId { get; set; }
+
+    [SupplyParameterFromQuery]
+    public Guid? ShowtimeId { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? MovieTitle { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? StartsAt { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? BasePrice { get; set; }
+
+    [SupplyParameterFromQuery(Name = "seats")]
+    public string? SeatsCsv { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Total { get; set; }
+
+    [SupplyParameterFromQuery(Name = "unitPrice")]
+    public string? UnitPriceFromQuery { get; set; }
+
+    private readonly List<string> SeatList = new();
+    private bool _hasSelections;
+    private string? _error;
+    private Guid? _successBookingId;
+    private bool _busy;
+
+    private string MovieDisplay => string.IsNullOrWhiteSpace(MovieTitle) ? "(from selection)" : MovieTitle!;
+
+    private void BeginSignIn()
     {
-        Nav.NavigateTo("/");
+        Session.ReturnAfterSignIn = Nav.Uri;
+        Nav.NavigateTo("/account");
+    }
+
+    protected override void OnParametersSet()
+    {
+        SeatList.Clear();
+        if (!string.IsNullOrWhiteSpace(SeatsCsv))
+        {
+            foreach (var part in SeatsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                SeatList.Add(part);
+            }
+        }
+
+        _hasSelections = MovieId.HasValue && ShowtimeId.HasValue && SeatList.Count > 0;
+        _successBookingId = null;
+        _error = null;
+    }
+
+    private string ShowtimeDisplay =>
+        string.IsNullOrWhiteSpace(StartsAt)
+            ? "See seat selector"
+            : DateTime.TryParse(StartsAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)
+                ? dt.ToLocalTime().ToString("ddd, M/d • h:mm tt")
+                : StartsAt!;
+
+    private string SeatSummary =>
+        SeatList.Count == 0 ? "—" : string.Join(", ", SeatList.OrderBy(s => s, StringComparer.Ordinal));
+
+    private decimal UnitPriceComputed
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(UnitPriceFromQuery)
+                && decimal.TryParse(UnitPriceFromQuery, NumberStyles.Number, CultureInfo.InvariantCulture, out var ud))
+            {
+                return ud;
+            }
+
+            if (!string.IsNullOrWhiteSpace(BasePrice)
+                && decimal.TryParse(BasePrice, NumberStyles.Number, CultureInfo.InvariantCulture, out var bp))
+            {
+                return bp;
+            }
+
+            return 0m;
+        }
+    }
+
+    private decimal TotalComputed
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Total)
+                && decimal.TryParse(Total, NumberStyles.Number, CultureInfo.InvariantCulture, out var t))
+            {
+                return t;
+            }
+
+            return UnitPriceComputed * SeatList.Count;
+        }
+    }
+
+    private static string FormatUsd(decimal amount) => string.Format(UsCulture, "{0:C}", amount);
+
+    private void GoHome() => Nav.NavigateTo("/");
+
+    private async Task ConfirmAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            if (!MovieId.HasValue || !ShowtimeId.HasValue || SeatList.Count == 0)
+            {
+                _error = "Missing movie, showtime, or seats.";
+                return;
+            }
+
+            var reserveUrl =
+                $"movies/{MovieId.Value}/showtimes/{ShowtimeId.Value}/reserve";
+            var payload = new
+            {
+                seat_labels = SeatList.OrderBy(s => s, StringComparer.Ordinal).ToList(),
+            };
+
+            using var resp = await Http.PostAsJsonAsync(reserveUrl, payload);
+
+            if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                _error = "Session expired—sign in again.";
+                return;
+            }
+
+            if (resp.StatusCode == HttpStatusCode.Conflict)
+            {
+                _error = "One or more seats were just taken—return to the seat map and choose again.";
+                return;
+            }
+
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+            {
+                _error = "Showtime not found—it may no longer exist.";
+                return;
+            }
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                _error = "Could not complete booking. Double-check seats and sign-in.";
+                return;
+            }
+
+            var body = await resp.Content.ReadFromJsonAsync<CheckoutConfirmApiResponse>();
+            _successBookingId = body?.BookingId;
+            Session.NotifyChanged();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void GoSeatMap()
+    {
+        if (!MovieId.HasValue || !ShowtimeId.HasValue)
+        {
+            Nav.NavigateTo("/seat-selector");
+            return;
+        }
+
+        Nav.NavigateTo(BuildSeatSelectorUrl());
+    }
+
+    private string BuildSeatSelectorUrl()
+    {
+        var q = new List<string> { $"showtimeId={ShowtimeId!.Value}", };
+        if (MovieId.HasValue)
+        {
+            q.Add($"movieId={MovieId.Value}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(MovieTitle))
+        {
+            q.Add($"movieTitle={Uri.EscapeDataString(MovieTitle!)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(StartsAt))
+        {
+            q.Add($"startsAt={Uri.EscapeDataString(StartsAt!)}");
+        }
+
+        q.Add($"basePrice={Uri.EscapeDataString(UnitPriceComputed.ToString(CultureInfo.InvariantCulture))}");
+        return $"/seat-selector?{string.Join("&", q)}";
     }
 }

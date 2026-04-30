@@ -58,3 +58,15 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.profile-menu-panel {
+    min-width: 288px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.profile-menu-panel .booking-snippet:last-of-type {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}

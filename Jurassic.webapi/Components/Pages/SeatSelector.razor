@@ -5,6 +5,7 @@
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject NavigationManager Nav
+@rendermode InteractiveServer
 
 <PageTitle>Seat Selector</PageTitle>
 
@@ -12,102 +13,133 @@
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
         <div>
             <h1 class="display-6 fw-bold text-primary mb-1">Choose Your Seats</h1>
-            <div class="text-muted">Pick seats, then continue to checkout.</div>
+            @if (HasMovieShowtimeContext)
+            {
+                <div class="text-muted">Seats load from the cinema API for your selected movie &amp; showtime.</div>
+            }
         </div>
         <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
     </div>
 
-    <div class="row g-4">
-        <div class="col-12 col-lg-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="fw-semibold text-muted small text-uppercase">Screen</div>
-                        <div class="badge bg-dark">Screen</div>
-                    </div>
+    @if (!HasMovieShowtimeContext)
+    {
+        <div class="alert alert-warning shadow-sm py-4" role="alert">
+            <h2 class="alert-heading h5 fw-semibold">Select a movie first</h2>
+            <p class="mb-3">Open <strong>Now Playing</strong>, pick a film, then tap a showtime. The seat map only appears after both a movie and a showtime are selected.</p>
+            <a href="/now-playing" class="btn btn-primary">Go to Now Playing</a>
+        </div>
+    }
+    else if (_loadingManifest)
+    {
+        <div class="text-center my-5 py-5">
+            <div class="spinner-border text-primary mb-3" role="status"><span class="visually-hidden">Loading seats…</span></div>
+            <p class="text-muted">Fetching seat availability…</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_manifestError))
+    {
+        <div class="alert alert-danger shadow-sm py-4" role="alert">
+            <strong>Could not load seats.</strong> @_manifestError
+            <div class="mt-3">
+                <button type="button" class="btn btn-primary me-2" @onclick="ReloadManifestAsync">Try again</button>
+                <a href="/now-playing" class="btn btn-outline-secondary">Now Playing</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <div class="col-12 col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="fw-semibold text-muted small text-uppercase">Screen</div>
+                            <div class="badge bg-dark">@(_lastManifest?.ScreenName ?? "Screen")</div>
+                        </div>
 
-                    <div class="text-center mb-3">
-                        <div class="screen-pill mx-auto mb-2">SCREEN</div>
-                        <div class="small text-muted">Tap seats to select/deselect</div>
-                    </div>
+                        <div class="text-center mb-3">
+                            <div class="screen-pill mx-auto mb-2">SCREEN</div>
+                            <div class="small text-muted">Tap seats to select/deselect (API shows what is sold or held).</div>
+                        </div>
 
-                    <div class="seat-legend d-flex flex-wrap gap-3 justify-content-center mb-3">
-                        <div class="d-flex align-items-center gap-2"><span class="seat-dot available"></span><span class="small text-muted">Available</span></div>
-                        <div class="d-flex align-items-center gap-2"><span class="seat-dot selected"></span><span class="small text-muted">Selected</span></div>
-                        <div class="d-flex align-items-center gap-2"><span class="seat-dot unavailable"></span><span class="small text-muted">Unavailable</span></div>
-                    </div>
+                        <div class="seat-legend d-flex flex-wrap gap-3 justify-content-center mb-3">
+                            <div class="d-flex align-items-center gap-2"><span class="seat-dot available"></span><span class="small text-muted">Available</span></div>
+                            <div class="d-flex align-items-center gap-2"><span class="seat-dot selected"></span><span class="small text-muted">Selected</span></div>
+                            <div class="d-flex align-items-center gap-2"><span class="seat-dot unavailable"></span><span class="small text-muted">Purchased or held</span></div>
+                        </div>
 
-                    <div class="seat-grid mx-auto">
-                        @foreach (var seat in Seats)
-                        {
-                            var css = GetSeatCss(seat);
-                            <button type="button"
-                                    class="@css"
-                                    disabled="@seat.IsUnavailable"
-                                    @onclick="() => ToggleSeat(seat)">
-                                @seat.Label
-                            </button>
-                        }
+                        <div class="seat-grid mx-auto">
+                            @foreach (var seat in _seats)
+                            {
+                                var css = GetSeatCss(seat);
+                                <button type="button"
+                                        class="@css"
+                                        disabled="@seat.IsUnavailable"
+                                        @onclick="() => ToggleSeat(seat)">
+                                    @seat.Label
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="card shadow-sm border-0 sticky-summary">
+                    <div class="card-body">
+                        <div class="small text-muted text-uppercase fw-semibold mb-2">Your selection</div>
+
+                        <div class="mb-3">
+                            <div class="fw-bold">Movie</div>
+                            <div class="text-muted small">@MovieDisplay</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="fw-bold">Showtime</div>
+                            <div class="text-muted small">@ShowtimeDisplay</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="fw-bold">Price</div>
+                            <div class="text-muted small">@PriceDisplay</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="fw-bold">Seats (@SelectedSeats.Count)</div>
+                            @if (SelectedSeats.Count == 0)
+                            {
+                                <div class="text-muted small">No seats selected yet.</div>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    @foreach (var s in SelectedSeats.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge bg-primary">@s</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                            <div class="fw-bold">Total</div>
+                            <div class="fw-bold">@FormatUsd(Total)</div>
+                        </div>
+
+                        <button class="btn btn-success w-100 mt-3"
+                                disabled="@(SelectedSeats.Count == 0)"
+                                @onclick="GoCheckout">
+                            Continue to Checkout
+                        </button>
+
+                        <div class="small text-muted mt-2">
+                            Purchased seats stay grey—they come from the reservation API after others complete checkout.
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-12 col-lg-4">
-            <div class="card shadow-sm border-0 sticky-summary">
-                <div class="card-body">
-                    <div class="small text-muted text-uppercase fw-semibold mb-2">Your selection</div>
-
-                    <div class="mb-3">
-                        <div class="fw-bold">Movie</div>
-                        <div class="text-muted small">@MovieDisplay</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="fw-bold">Showtime</div>
-                        <div class="text-muted small">@ShowtimeDisplay</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="fw-bold">Price</div>
-                        <div class="text-muted small">@PriceDisplay</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="fw-bold">Seats (@SelectedSeats.Count)</div>
-                        @if (SelectedSeats.Count == 0)
-                        {
-                            <div class="text-muted small">No seats selected yet.</div>
-                        }
-                        else
-                        {
-                            <div class="d-flex flex-wrap gap-2 mt-2">
-                                @foreach (var s in SelectedSeats.OrderBy(x => x))
-                                {
-                                    <span class="badge bg-primary">@s</span>
-                                }
-                            </div>
-                        }
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center border-top pt-3">
-                        <div class="fw-bold">Total</div>
-                        <div class="fw-bold">@FormatUsd(Total)</div>
-                    </div>
-
-                    <button class="btn btn-success w-100 mt-3"
-                            disabled="@(SelectedSeats.Count == 0)"
-                            @onclick="GoCheckout">
-                        Continue to Checkout
-                    </button>
-
-                    <div class="small text-muted mt-2">
-                        (Checkout flow can be finished later — routing is working.)
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    }
 </div>
 
 <style>
@@ -179,7 +211,6 @@
     [SupplyParameterFromQuery]
     public string? MovieTitle { get; set; }
 
-    // Passed from Now Playing so the page can display real info immediately.
     [SupplyParameterFromQuery]
     public string? StartsAt { get; set; }
 
@@ -187,15 +218,36 @@
     public string? BasePrice { get; set; }
 
     private static readonly CultureInfo UsCulture = CultureInfo.GetCultureInfo("en-US");
+
+    private int? _lastLoadedPairKey;
+    private bool _loadingManifest;
+    private string? _manifestError;
+    private ShowtimeSeatsApiDto? _lastManifest;
+
+    private sealed record Seat(string Label, bool IsUnavailable);
+
+    private List<Seat> _seats = new();
+    private readonly HashSet<string> SelectedSeats = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool HasMovieShowtimeContext => MovieId.HasValue && ShowtimeId.HasValue;
+
     private decimal UnitPrice => ParseUnitPrice();
+
     private decimal Total => UnitPrice * SelectedSeats.Count;
 
-    private string MovieDisplay => string.IsNullOrWhiteSpace(MovieTitle) ? "Not selected" : MovieTitle;
+    private string MovieDisplay => string.IsNullOrWhiteSpace(MovieTitle)
+        ? _lastManifest?.MovieTitle ?? "Not selected"
+        : MovieTitle!;
 
     private string ShowtimeDisplay
     {
         get
         {
+            if (_lastManifest is not null)
+            {
+                return _lastManifest.StartsAt.ToLocalTime().ToString("ddd, M/d • h:mm tt");
+            }
+
             if (string.IsNullOrWhiteSpace(StartsAt))
             {
                 return "Not selected";
@@ -203,7 +255,7 @@
 
             return DateTime.TryParse(StartsAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)
                 ? dt.ToLocalTime().ToString("ddd, M/d • h:mm tt")
-                : StartsAt;
+                : StartsAt!;
         }
     }
 
@@ -213,76 +265,109 @@
 
     private decimal ParseUnitPrice()
     {
-        if (string.IsNullOrWhiteSpace(BasePrice)) return 0m;
+        if (_lastManifest is not null)
+        {
+            return _lastManifest.BasePrice;
+        }
+
+        if (string.IsNullOrWhiteSpace(BasePrice))
+        {
+            return 0m;
+        }
+
         return decimal.TryParse(BasePrice, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : 0m;
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!ShowtimeId.HasValue || HasFriendlyDisplayData())
+        if (!HasMovieShowtimeContext)
         {
+            _seats.Clear();
+            _loadingManifest = false;
+            _manifestError = null;
+            _lastManifest = null;
+            SelectedSeats.Clear();
+            _lastLoadedPairKey = null;
             return;
         }
 
+        var pairKey = HashCode.Combine(MovieId!.Value, ShowtimeId!.Value);
+        if (pairKey != _lastLoadedPairKey)
+        {
+            SelectedSeats.Clear();
+            _lastLoadedPairKey = pairKey;
+        }
+
+        await LoadSeatManifestAsync();
+    }
+
+    private async Task ReloadManifestAsync()
+    {
+        await LoadSeatManifestAsync();
+    }
+
+    private async Task LoadSeatManifestAsync()
+    {
+        _manifestError = null;
+        _loadingManifest = true;
         try
         {
-            var details = await Http.GetFromJsonAsync<ShowtimeDetailsResponse>($"showtimes/{ShowtimeId.Value}");
-            if (details is null)
+            var url = $"movies/{MovieId!.Value}/showtimes/{ShowtimeId!.Value}/seats";
+            var dto = await Http.GetFromJsonAsync<ShowtimeSeatsApiDto>(url);
+            if (dto is null || dto.Seats.Count == 0)
             {
+                _manifestError = "The seat list was empty.";
+                _seats.Clear();
+                _lastManifest = null;
                 return;
             }
 
-            MovieId ??= details.MovieId;
-            MovieTitle ??= details.MovieTitle;
-            StartsAt ??= details.StartsAt.ToUniversalTime().ToString("o");
-            BasePrice ??= details.BasePrice.ToString(CultureInfo.InvariantCulture);
-        }
-        catch
-        {
-            // Keep graceful fallback labels when details endpoint is unavailable.
-        }
-    }
-
-    private bool HasFriendlyDisplayData()
-    {
-        return !string.IsNullOrWhiteSpace(MovieTitle)
-               && !string.IsNullOrWhiteSpace(StartsAt)
-               && !string.IsNullOrWhiteSpace(BasePrice);
-    }
-
-    private sealed record Seat(string Label, bool IsUnavailable);
-
-    private readonly List<Seat> Seats = BuildSeats();
-    private readonly HashSet<string> SelectedSeats = new();
-
-    private static List<Seat> BuildSeats()
-    {
-        // Simple placeholder seat map until we back it with a real seating API.
-        // 6 rows x 8 seats = 48 seats.
-        var list = new List<Seat>(48);
-        var rows = new[] { "A", "B", "C", "D", "E", "F" };
-        foreach (var row in rows)
-        {
-            for (var n = 1; n <= 8; n++)
+            _lastManifest = dto;
+            if (string.IsNullOrWhiteSpace(MovieTitle))
             {
-                var label = $"{row}{n}";
-                var unavailable = label is "B4" or "C6" or "E2"; // placeholder blocked seats
-                list.Add(new Seat(label, unavailable));
+                MovieTitle = dto.MovieTitle;
             }
+
+            if (string.IsNullOrWhiteSpace(StartsAt))
+            {
+                StartsAt = dto.StartsAt.ToUniversalTime().ToString("o");
+            }
+
+            BasePrice ??= dto.BasePrice.ToString(CultureInfo.InvariantCulture);
+
+            _seats = dto.Seats
+                .Where(s => !string.IsNullOrWhiteSpace(s.Label))
+                .Select(s => new Seat(s.Label.Trim().ToUpperInvariant(), !s.Available))
+                .OrderBy(s => s.Label, StringComparer.Ordinal)
+                .ToList();
+
+            var unavailable = dto.Seats.Where(s => !s.Available).Select(s => s.Label.Trim().ToUpperInvariant()).ToHashSet(StringComparer.Ordinal);
+            SelectedSeats.RemoveWhere(sl => unavailable.Contains(sl.Trim().ToUpperInvariant()));
         }
-        return list;
+        catch (Exception ex)
+        {
+            _manifestError = string.IsNullOrWhiteSpace(ex.Message) ? "API error." : ex.Message;
+            _seats.Clear();
+            _lastManifest = null;
+        }
+        finally
+        {
+            _loadingManifest = false;
+        }
     }
 
     private string GetSeatCss(Seat seat)
     {
         var selected = SelectedSeats.Contains(seat.Label);
-        if (seat.IsUnavailable) return "seat-btn unavailable";
-        return selected ? "seat-btn selected" : "seat-btn";
+        return seat.IsUnavailable ? "seat-btn unavailable" : selected ? "seat-btn selected" : "seat-btn";
     }
 
     private void ToggleSeat(Seat seat)
     {
-        if (seat.IsUnavailable) return;
+        if (seat.IsUnavailable)
+        {
+            return;
+        }
 
         if (!SelectedSeats.Add(seat.Label))
         {
@@ -292,22 +377,28 @@
 
     private void GoCheckout()
     {
-        // Keep this routing-only for now; params let Checkout be filled out later.
-        var query = new List<string>();
-        if (MovieId.HasValue) query.Add($"movieId={MovieId.Value}");
-        if (ShowtimeId.HasValue) query.Add($"showtimeId={ShowtimeId.Value}");
-        if (!string.IsNullOrWhiteSpace(MovieTitle)) query.Add($"movieTitle={Uri.EscapeDataString(MovieTitle)}");
-        if (!string.IsNullOrWhiteSpace(StartsAt)) query.Add($"startsAt={Uri.EscapeDataString(StartsAt)}");
-        query.Add($"seats={Uri.EscapeDataString(string.Join(",", SelectedSeats.OrderBy(x => x)))}");
-        query.Add($"unitPrice={Uri.EscapeDataString(UnitPrice.ToString(CultureInfo.InvariantCulture))}");
+        var query = new List<string>
+        {
+            $"movieId={MovieId!.Value}",
+            $"showtimeId={ShowtimeId!.Value}",
+        };
+
+        if (!string.IsNullOrWhiteSpace(MovieTitle))
+        {
+            query.Add($"movieTitle={Uri.EscapeDataString(MovieTitle!)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(StartsAt))
+        {
+            query.Add($"startsAt={Uri.EscapeDataString(StartsAt!)}");
+        }
+
+        query.Add($"basePrice={Uri.EscapeDataString(UnitPrice.ToString(CultureInfo.InvariantCulture))}");
+        query.Add($"seats={Uri.EscapeDataString(string.Join(",", SelectedSeats.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)))}");
         query.Add($"total={Uri.EscapeDataString(Total.ToString(CultureInfo.InvariantCulture))}");
 
-        var url = "/checkout" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
-        Nav.NavigateTo(url);
+        Nav.NavigateTo("/checkout?" + string.Join("&", query));
     }
 
-    private void GoBack()
-    {
-        Nav.NavigateTo("/now-playing");
-    }
+    private void GoBack() => Nav.NavigateTo("/now-playing");
 }

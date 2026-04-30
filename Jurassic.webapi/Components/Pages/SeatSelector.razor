@@ -13,10 +13,6 @@
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
         <div>
             <h1 class="display-6 fw-bold text-primary mb-1">Choose Your Seats</h1>
-            @if (HasMovieShowtimeContext)
-            {
-                <div class="text-muted">Seats load from the cinema API for your selected movie &amp; showtime.</div>
-            }
         </div>
         <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
     </div>
@@ -59,7 +55,7 @@
 
                         <div class="text-center mb-3">
                             <div class="screen-pill mx-auto mb-2">SCREEN</div>
-                            <div class="small text-muted">Tap seats to select/deselect (API shows what is sold or held).</div>
+                            <div class="small text-muted">Tap seats to select/deselect.</div>
                         </div>
 
                         <div class="seat-legend d-flex flex-wrap gap-3 justify-content-center mb-3">
@@ -132,9 +128,6 @@
                             Continue to Checkout
                         </button>
 
-                        <div class="small text-muted mt-2">
-                            Purchased seats stay grey—they come from the reservation API after others complete checkout.
-                        </div>
                     </div>
                 </div>
             </div>

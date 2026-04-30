@@ -94,7 +94,7 @@ app.MapPost("/auth/register", async (
             return Results.BadRequest();
         }
 
-        var email = body.Email.Trim();
+        var email = body.Email.Trim().ToLowerInvariant();
         if (await authRepository.EmailExistsAsync(email, cancellationToken))
         {
             return Results.Conflict();

@@ -32,7 +32,7 @@ public sealed class WebAuthSeeder
             return;
         }
 
-        var email = _configuration["WebAuthSeed:DemoEmail"] ?? "demo@jurassic.test";
+        var email = (_configuration["WebAuthSeed:DemoEmail"] ?? "demo@jurassic.test").Trim().ToLowerInvariant();
         var password = _configuration["WebAuthSeed:DemoPassword"] ?? "Password123!";
         var displayName = _configuration["WebAuthSeed:DemoDisplayName"] ?? "Demo User";
 

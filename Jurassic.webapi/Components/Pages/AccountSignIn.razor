@@ -120,10 +120,7 @@
                 return;
             }
 
-            Session.Email = _signInEmail.Trim();
-            Session.AccessToken = payload.AccessToken;
-            Session.RefreshToken = payload.RefreshToken;
-            Nav.NavigateTo("/now-playing");
+            CompleteSignIn(_signInEmail, payload);
         }
         catch (Exception ex)
         {
@@ -169,13 +166,22 @@
             }
 
             response.EnsureSuccessStatusCode();
-            var created = await response.Content.ReadFromJsonAsync<AuthRegisterResponse>();
-            _signUpSuccess = created is null
-                ? "Account created. You can sign in now."
-                : $"Account created for {created.Email}. You can sign in now.";
-            _tab = Tab.SignIn;
-            _signInEmail = _signUpEmail.Trim();
-            _signInPassword = "";
+            await response.Content.ReadFromJsonAsync<AuthRegisterResponse>();
+
+            var login = await Http.PostAsJsonAsync("auth/login", new { email = _signUpEmail, password = _signUpPassword });
+            login.EnsureSuccessStatusCode();
+
+            var payload = await login.Content.ReadFromJsonAsync<AuthLoginResponse>();
+            if (payload is null || string.IsNullOrEmpty(payload.AccessToken))
+            {
+                _signUpSuccess = "Account created. You can sign in now.";
+                _tab = Tab.SignIn;
+                _signInEmail = _signUpEmail.Trim();
+                _signInPassword = "";
+                return;
+            }
+
+            CompleteSignIn(_signUpEmail, payload);
         }
         catch (Exception ex)
         {
@@ -185,5 +191,36 @@
         {
             _busy = false;
         }
+    }
+
+    private void CompleteSignIn(string email, AuthLoginResponse payload)
+    {
+        Session.Email = email.Trim();
+        Session.AccessToken = payload.AccessToken;
+        Session.RefreshToken = payload.RefreshToken;
+        Session.NotifyChanged();
+
+        var next = Session.ReturnAfterSignIn;
+        Session.ReturnAfterSignIn = null;
+        if (!string.IsNullOrEmpty(next))
+        {
+            try
+            {
+                var parsed = new Uri(next, UriKind.Absolute);
+                var baseAuthority = new Uri(Nav.BaseUri).GetLeftPart(UriPartial.Authority).TrimEnd('/');
+                var candAuthority = parsed.GetLeftPart(UriPartial.Authority).TrimEnd('/');
+                if (string.Equals(baseAuthority, candAuthority, StringComparison.OrdinalIgnoreCase))
+                {
+                    Nav.NavigateTo(parsed.PathAndQuery + parsed.Fragment);
+                    return;
+                }
+            }
+            catch (UriFormatException)
+            {
+                // fall through to default
+            }
+        }
+
+        Nav.NavigateTo("/now-playing");
     }
 }

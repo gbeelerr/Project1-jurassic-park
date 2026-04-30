@@ -429,3 +429,13 @@ WHERE NOT EXISTS (
     WHERE screen_id = (SELECT id FROM screens WHERE name = 'T-Rex Theater' LIMIT 1)
       AND starts_at = (((CURRENT_DATE + 2) + TIME '19:30') AT TIME ZONE 'UTC')
 );
+
+-- 6 rows × 8 seats per screen (labels A1–F8); matches Blazor seat map. Only when a screen has no seats yet.
+INSERT INTO seats (screen_id, row_label, seat_number, seat_class, is_active)
+SELECT sc.id, rl.row_l, seat_n, 'standard'::seat_class, true
+FROM screens sc
+CROSS JOIN (VALUES ('A'), ('B'), ('C'), ('D'), ('E'), ('F')) AS rl(row_l)
+CROSS JOIN generate_series(1, 8) AS seat_n
+WHERE NOT EXISTS (
+    SELECT 1 FROM seats s WHERE s.screen_id = sc.id LIMIT 1
+);

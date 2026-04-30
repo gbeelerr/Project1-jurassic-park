@@ -1,10 +1,8 @@
-﻿@using BlazorApp1.Services
-@inject UserSession Session
-
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+﻿<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
     <div class="container-fluid">
         <a class="navbar-brand" href="/">Jurassic Park Cinema</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#primaryNav" aria-controls="primaryNav" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#primaryNav"
+                aria-controls="primaryNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="primaryNav">
@@ -15,15 +13,11 @@
                 <NavLink class="nav-link" href="checkout">Checkout</NavLink>
             </div>
             <div class="account-action account-action-mobile d-lg-none mt-2">
-                <NavLink class="btn btn-outline-light account-btn" href="account">
-                    @(Session.IsSignedIn ? Session.Email : "Sign in or create account")
-                </NavLink>
+                <ProfileMenu CssClass="w-100"/>
             </div>
         </div>
         <div class="account-action account-action-desktop d-none d-lg-flex">
-            <NavLink class="btn btn-outline-light account-btn" href="account">
-                @(Session.IsSignedIn ? Session.Email : "Sign in or create account")
-            </NavLink>
+            <ProfileMenu/>
         </div>
     </div>
 </nav>

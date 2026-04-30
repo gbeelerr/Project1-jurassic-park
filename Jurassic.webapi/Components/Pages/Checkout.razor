@@ -1,24 +1,25 @@
 @page "/checkout"
+@using BlazorApp1.Services
 @inject NavigationManager Nav
+@inject UserSession Session
 
 <PageTitle>Checkout</PageTitle>
 
-<h1>Checkout</h1>
+<div class="container mt-4 pb-5">
+    <h1 class="mb-3">Checkout</h1>
 
-<p>Enter your information to complete booking.</p>
-
-<input placeholder="Name" class="form-control" />
-<br />
-<input placeholder="Email" class="form-control" />
-<br />
-
-<button class="btn btn-primary me-2">
-    Confirm Booking
-</button>
-
-<button class="btn btn-secondary" @onclick="GoHome">
-    Back to Home
-</button>
+    @if (!Session.IsSignedIn)
+    {
+        <p class="text-muted mb-4">Sign in to continue with your booking.</p>
+        <a class="btn btn-primary me-2" href="/account">Sign in</a>
+        <button type="button" class="btn btn-secondary" @onclick="GoHome">Back to Home</button>
+    }
+    else
+    {
+        <p class="text-muted mb-4">This checkout flow is under construction. Thanks for your patience.</p>
+        <button type="button" class="btn btn-secondary" @onclick="GoHome">Back to Home</button>
+    }
+</div>
 
 @code {
     private void GoHome()

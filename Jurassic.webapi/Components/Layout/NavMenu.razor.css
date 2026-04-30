@@ -1,5 +1,9 @@
 .navbar-brand {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
+    font-family: var(--jp-header-font);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--jp-yellow) !important;
 }
 
 .navbar > .container-fluid {
@@ -7,8 +11,15 @@
     min-height: 3.5rem;
 }
 
+.navbar {
+    background: linear-gradient(90deg, rgba(14, 31, 18, 0.97) 0%, rgba(22, 50, 29, 0.95) 55%, rgba(13, 28, 16, 0.97) 100%) !important;
+    border-bottom: 2px solid var(--jp-yellow);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
 .nav-links {
     margin: 0;
+    gap: 0.3rem;
 }
 
 .account-action {
@@ -25,7 +36,26 @@
 }
 
 .navbar ::deep .nav-link.active {
-    font-weight: 600;
+    font-weight: 700;
+    color: var(--jp-yellow) !important;
+    background: rgba(250, 204, 46, 0.11);
+    border-color: rgba(250, 204, 46, 0.45);
+}
+
+.navbar ::deep .nav-link {
+    color: var(--jp-bone) !important;
+    border: 1px solid transparent;
+    border-radius: 0.2rem;
+    text-transform: uppercase;
+    font-size: 0.86rem;
+    letter-spacing: 0.04em;
+    padding: 0.44rem 0.62rem;
+}
+
+.navbar ::deep .nav-link:hover {
+    color: var(--jp-yellow) !important;
+    border-color: rgba(250, 204, 46, 0.4);
+    background: rgba(250, 204, 46, 0.08);
 }
 
 @media (max-width: 991.98px) {

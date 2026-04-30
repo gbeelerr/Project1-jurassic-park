@@ -9,11 +9,6 @@ namespace Jurassic.movieserviceapi.Repositories;
 /// <summary>Bookings recorded in jurassic_api (bookings/tickets tables). Mirrors school seat-map labels like A1.</summary>
 public sealed class BookingRepository : IBookingRepository
 {
-    private static readonly HashSet<string> LayoutHeldSeatLabels =
-    [
-        "B4", "C6", "E2"
-    ];
-
     private readonly string _connectionString;
 
     public BookingRepository(IConfiguration configuration)
@@ -39,10 +34,6 @@ public sealed class BookingRepository : IBookingRepository
         var sold = await connection.QueryAsync<string>(
             new CommandDefinition(sql, new { ShowtimeId = showtimeId }, cancellationToken: cancellationToken));
         var set = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (var label in LayoutHeldSeatLabels)
-        {
-            set.Add(SeatLabelNormalizer.Normalize(label));
-        }
 
         foreach (var s in sold)
         {
@@ -144,14 +135,6 @@ public sealed class BookingRepository : IBookingRepository
         if (normalized.Length == 0)
         {
             return (null, 0m, "invalid");
-        }
-
-        foreach (var l in normalized)
-        {
-            if (LayoutHeldSeatLabels.Contains(l, StringComparer.Ordinal))
-            {
-                return (null, 0m, "held");
-            }
         }
 
         await using var connection = new NpgsqlConnection(_connectionString);

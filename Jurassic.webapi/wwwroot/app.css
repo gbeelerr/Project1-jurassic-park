@@ -1,19 +1,94 @@
+:root {
+    --jp-green: #2C5530;
+    --jp-red: #9E1B15;
+    --jp-yellow: #FACC2E;
+    --jp-bone: #E3DAC9;
+    --jp-night: #102315;
+    --jp-panel: #1a3722;
+    --jp-border: #496b4a;
+    --jp-body: #121a14;
+    --jp-muted: #b8b19f;
+    --jp-header-font: "Rockwell", "Courier Prime", "Courier New", serif;
+    --jp-body-font: "Inter", "Roboto", "Segoe UI", Arial, sans-serif;
+}
+
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: var(--jp-body-font);
+    color: var(--jp-bone);
+    background-color: var(--jp-body);
+    background-image:
+        radial-gradient(circle at 16% 18%, rgba(250, 204, 46, 0.08) 0, rgba(250, 204, 46, 0) 35%),
+        radial-gradient(circle at 80% 8%, rgba(158, 27, 21, 0.13) 0, rgba(158, 27, 21, 0) 28%),
+        repeating-linear-gradient(
+            135deg,
+            rgba(227, 218, 201, 0.03) 0 2px,
+            transparent 2px 12px
+        ),
+        linear-gradient(180deg, #0f1f14 0%, #182c1c 35%, #0f1a14 100%);
+}
+
+h1, h2, h3, h4, h5, h6, .display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+    font-family: var(--jp-header-font);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--jp-yellow);
+}
+
+a:hover, .btn-link:hover {
+    color: #ffe078;
+}
+
+.btn {
+    border-radius: 0.15rem;
+    border-width: 2px;
+    letter-spacing: 0.03em;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
 .btn-primary {
-    color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    color: #190f0f;
+    background-color: var(--jp-yellow);
+    border-color: #c69f2c;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    color: #140f0f;
+    background-color: #ffd95f;
+    border-color: #edc244;
+}
+
+.btn-outline-secondary {
+    color: var(--jp-bone);
+    border-color: var(--jp-border);
+    background-color: rgba(16, 35, 21, 0.45);
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+    color: var(--jp-yellow);
+    border-color: var(--jp-yellow);
+    background-color: rgba(250, 204, 46, 0.12);
+}
+
+.btn-success {
+    color: #f4efe5;
+    background-color: var(--jp-green);
+    border-color: #5d855f;
+}
+
+.btn-success:hover,
+.btn-success:focus {
+    background-color: #35683a;
+    border-color: #6b9a6c;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem #0f1a14, 0 0 0 0.25rem rgba(250, 204, 46, 0.45);
 }
 
 .content {
@@ -34,6 +109,49 @@ h1:focus {
 
 .validation-message {
     color: #e50000;
+}
+
+.text-primary {
+    color: var(--jp-yellow) !important;
+}
+
+.text-muted {
+    color: var(--jp-muted) !important;
+}
+
+.alert {
+    border-radius: 0.2rem;
+    border-width: 2px;
+}
+
+.alert-info {
+    color: #dfecff;
+    background-color: rgba(28, 61, 92, 0.45);
+    border-color: rgba(95, 154, 206, 0.8);
+}
+
+.alert-warning {
+    color: #1b1910;
+    background-color: rgba(250, 204, 46, 0.85);
+    border-color: #ffde75;
+}
+
+.card {
+    background: linear-gradient(180deg, rgba(30, 56, 34, 0.94) 0%, rgba(18, 36, 22, 0.94) 100%);
+    border: 2px solid var(--jp-border) !important;
+    border-radius: 0.3rem;
+    color: var(--jp-bone);
+}
+
+.badge.bg-primary {
+    background-color: var(--jp-red) !important;
+    color: #fff7ee;
+}
+
+.badge.bg-dark {
+    background-color: #0d0f0e !important;
+    border: 1px solid #40463f;
+    color: var(--jp-bone);
 }
 
 .blazor-error-boundary {

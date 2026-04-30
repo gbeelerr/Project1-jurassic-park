@@ -145,25 +145,25 @@
 <style>
     .screen-pill {
         width: min(520px, 100%);
-        background: linear-gradient(90deg, rgba(13,110,253,.15), rgba(13,110,253,.03));
-        border: 1px solid rgba(13,110,253,.25);
-        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(250,204,46,.18), rgba(250,204,46,.06));
+        border: 2px solid rgba(250,204,46,.5);
+        border-radius: .2rem;
         padding: .5rem 1rem;
         font-weight: 700;
         letter-spacing: .12em;
-        color: #0d6efd;
+        color: #facc2e;
     }
 
     .seat-legend .seat-dot {
         width: 14px;
         height: 14px;
-        border-radius: 4px;
+        border-radius: 2px;
         display: inline-block;
-        border: 1px solid rgba(0,0,0,.15);
+        border: 1px solid rgba(255,255,255,.22);
     }
-    .seat-dot.available { background: #f8f9fa; }
-    .seat-dot.selected { background: #0d6efd; border-color: #0d6efd; }
-    .seat-dot.unavailable { background: #adb5bd; }
+    .seat-dot.available { background: #e3dac9; }
+    .seat-dot.selected { background: #facc2e; border-color: #facc2e; }
+    .seat-dot.unavailable { background: #9e1b15; }
 
     .seat-grid {
         display: grid;
@@ -173,24 +173,24 @@
     }
 
     .seat-btn {
-        border-radius: .5rem;
+        border-radius: .18rem;
         padding: .55rem .25rem;
         font-weight: 700;
-        border: 1px solid rgba(13,110,253,.25);
-        background: #f8f9fa;
-        color: #0d6efd;
+        border: 2px solid rgba(250,204,46,.35);
+        background: #e3dac9;
+        color: #1a2019;
         transition: transform .08s ease, background .15s ease, border-color .15s ease;
     }
     .seat-btn:hover { transform: translateY(-1px); }
     .seat-btn.selected {
-        background: #0d6efd;
-        border-color: #0d6efd;
-        color: white;
+        background: #facc2e;
+        border-color: #facc2e;
+        color: #14100d;
     }
     .seat-btn.unavailable {
-        background: #adb5bd;
-        border-color: #adb5bd;
-        color: #495057;
+        background: #9e1b15;
+        border-color: #c53930;
+        color: #ffe9df;
         cursor: not-allowed;
         opacity: .85;
     }

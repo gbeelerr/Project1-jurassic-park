@@ -9,13 +9,14 @@
 
 <PageTitle>Seat Selector</PageTitle>
 
-<div class="container py-4 pb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+<div class="container py-4 pb-5 page-shell seat-page">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-            <h1 class="display-6 fw-bold text-primary mb-1">Choose Your Seats</h1>
+            <div class="eyebrow mb-2">Seat selection</div>
+            <h1 class="display-6 fw-bold mb-1">Choose Your Seats</h1>
             @if (HasMovieShowtimeContext)
             {
-                <div class="text-muted">Seats load from the cinema API for your selected movie &amp; showtime.</div>
+                <div class="text-muted">Live availability for your selected movie and showtime.</div>
             }
         </div>
         <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
@@ -50,11 +51,11 @@
     {
         <div class="row g-4">
             <div class="col-12 col-lg-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
+                <div class="card seat-map-card shadow-sm border-0">
+                    <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div class="fw-semibold text-muted small text-uppercase">Screen</div>
-                            <div class="badge bg-dark">@(_lastManifest?.ScreenName ?? "Screen")</div>
+                            <div class="badge screen-badge">@(_lastManifest?.ScreenName ?? "Screen")</div>
                         </div>
 
                         <div class="text-center mb-3">
@@ -85,8 +86,8 @@
             </div>
 
             <div class="col-12 col-lg-4">
-                <div class="card shadow-sm border-0 sticky-summary">
-                    <div class="card-body">
+                <div class="card shadow-sm border-0 sticky-summary summary-card">
+                    <div class="card-body p-4">
                         <div class="small text-muted text-uppercase fw-semibold mb-2">Your selection</div>
 
                         <div class="mb-3">
@@ -115,13 +116,13 @@
                                 <div class="d-flex flex-wrap gap-2 mt-2">
                                     @foreach (var s in SelectedSeats.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
                                     {
-                                        <span class="badge bg-primary">@s</span>
+                                        <span class="badge selected-seat-badge">@s</span>
                                     }
                                 </div>
                             }
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                        <div class="d-flex justify-content-between align-items-center border-top pt-3 total-row">
                             <div class="fw-bold">Total</div>
                             <div class="fw-bold">@FormatUsd(Total)</div>
                         </div>
@@ -145,13 +146,36 @@
 <style>
     .screen-pill {
         width: min(520px, 100%);
-        background: linear-gradient(90deg, rgba(13,110,253,.15), rgba(13,110,253,.03));
-        border: 1px solid rgba(13,110,253,.25);
-        border-radius: 999px;
-        padding: .5rem 1rem;
-        font-weight: 700;
-        letter-spacing: .12em;
-        color: #0d6efd;
+        background: linear-gradient(90deg, rgba(214,168,79,.28), rgba(255,255,255,.7));
+        border: 1px solid rgba(214,168,79,.4);
+        border-radius: 0.55rem;
+        padding: .6rem 1rem;
+        font-weight: 850;
+        letter-spacing: 0;
+        color: #51370d;
+        box-shadow: inset 0 -14px 22px rgba(24, 33, 47, 0.04);
+    }
+
+    .seat-page .page-header {
+        color: #fff;
+    }
+
+    .seat-page .page-header h1 {
+        color: #fff;
+    }
+
+    .seat-page .page-header .text-muted {
+        color: rgba(255, 255, 255, 0.72) !important;
+    }
+
+    .seat-map-card,
+    .summary-card {
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    .screen-badge {
+        background: #18212f;
+        color: #fff;
     }
 
     .seat-legend .seat-dot {
@@ -161,43 +185,63 @@
         display: inline-block;
         border: 1px solid rgba(0,0,0,.15);
     }
-    .seat-dot.available { background: #f8f9fa; }
-    .seat-dot.selected { background: #0d6efd; border-color: #0d6efd; }
-    .seat-dot.unavailable { background: #adb5bd; }
+    .seat-dot.available { background: #fff; }
+    .seat-dot.selected { background: #b42318; border-color: #b42318; }
+    .seat-dot.unavailable { background: #9aa4b2; }
 
     .seat-grid {
         display: grid;
         grid-template-columns: repeat(8, minmax(0, 1fr));
-        gap: .5rem;
+        gap: .58rem;
         width: min(520px, 100%);
+        background: #f6f4f0;
+        border: 1px solid rgba(24, 33, 47, 0.08);
+        border-radius: 0.7rem;
+        padding: 1rem;
     }
 
     .seat-btn {
-        border-radius: .5rem;
+        border-radius: .45rem;
         padding: .55rem .25rem;
-        font-weight: 700;
-        border: 1px solid rgba(13,110,253,.25);
-        background: #f8f9fa;
-        color: #0d6efd;
-        transition: transform .08s ease, background .15s ease, border-color .15s ease;
+        font-weight: 800;
+        border: 1px solid rgba(24, 33, 47, 0.14);
+        background: #fff;
+        color: #18212f;
+        box-shadow: 0 5px 12px rgba(24, 33, 47, 0.06);
+        transition: transform .08s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
     }
-    .seat-btn:hover { transform: translateY(-1px); }
+    .seat-btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(180,35,24,.45);
+        box-shadow: 0 8px 18px rgba(24, 33, 47, 0.1);
+    }
     .seat-btn.selected {
-        background: #0d6efd;
-        border-color: #0d6efd;
+        background: #b42318;
+        border-color: #b42318;
         color: white;
     }
     .seat-btn.unavailable {
-        background: #adb5bd;
-        border-color: #adb5bd;
-        color: #495057;
+        background: #cbd2dc;
+        border-color: #cbd2dc;
+        color: #687385;
         cursor: not-allowed;
         opacity: .85;
+        box-shadow: none;
     }
 
     .sticky-summary {
         position: sticky;
-        top: 1rem;
+        top: 5.5rem;
+    }
+
+    .selected-seat-badge {
+        background: #b42318;
+        color: #fff;
+        padding: 0.45rem 0.55rem;
+    }
+
+    .total-row {
+        font-size: 1.1rem;
     }
 </style>
 

@@ -7,17 +7,21 @@
 
 <PageTitle>Now Playing</PageTitle>
 
-<div class="container mt-4 pb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-        <h1 class="display-5 fw-bold text-primary">Now Playing</h1>
+<div class="container mt-4 pb-5 page-shell now-playing-page">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <div class="eyebrow mb-2">Book a showtime</div>
+            <h1 class="display-5 fw-bold mb-1">Now Playing</h1>
+            <p class="text-muted mb-0">Choose a date, pick a movie, and reserve your seats.</p>
+        </div>
         <button class="btn btn-outline-secondary" @onclick="GoHome">
             Back Home
         </button>
     </div>
 
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
-        <p class="lead text-muted mb-0">Select a date, then pick a movie/showtime to start booking.</p>
-        <div class="d-flex align-items-center gap-2">
+    <div class="toolbar d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div class="small text-muted fw-semibold">Fresh showtimes update from the movie API.</div>
+        <div class="d-flex align-items-center gap-2 date-picker">
             <label class="small text-muted fw-semibold mb-0" for="nowPlayingDate">Show date</label>
             <input id="nowPlayingDate"
                    type="date"
@@ -57,14 +61,14 @@
             @foreach (var movie in movies)
             {
                 <div class="col">
-                    <div class="card h-100 shadow-sm transition-hover">
+                    <div class="card movie-card h-100 shadow-sm transition-hover">
                         @if (!string.IsNullOrEmpty(movie.PosterUrl))
                         {
-                            <img src="@movie.PosterUrl" class="card-img-top" alt="@movie.Title Poster" style="object-fit: cover; height: 350px;">
+                            <img src="@movie.PosterUrl" class="card-img-top movie-poster" alt="@movie.Title Poster">
                         }
                         else
                         {
-                            <div class="card-img-top bg-dark d-flex flex-column align-items-center justify-content-center text-white p-4" style="height: 350px;">
+                            <div class="card-img-top bg-dark d-flex flex-column align-items-center justify-content-center text-white p-4 movie-poster-placeholder">
                                 <div class="mb-2 text-secondary h4">Now Showing</div>
                                 <h5 class="fw-bold text-center">@movie.Title</h5>
                                 <span class="badge bg-secondary mt-2">Poster Coming Soon</span>
@@ -74,24 +78,24 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <h5 class="card-title fw-bold mb-0">@movie.Title</h5>
-                                <span class="badge bg-info text-dark">@movie.Rating</span>
+                                <span class="badge rating-badge">@movie.Rating</span>
                             </div>
 
                             <div class="d-flex flex-wrap gap-2 mb-3 text-muted small">
-                                <span class="d-inline-flex align-items-center">
+                                <span class="meta-chip d-inline-flex align-items-center">
                                     Runtime: @movie.DurationMins mins
                                 </span>
-                                <span class="d-inline-flex align-items-center">
+                                <span class="meta-chip d-inline-flex align-items-center">
                                     Screen: @movie.ScreenName (@movie.ScreenType)
                                 </span>
                             </div>
 
-                            <button class="btn btn-outline-info btn-sm w-100" @onclick="() => ShowDescription(movie)">
+                            <button class="btn btn-outline-primary btn-sm w-100" @onclick="() => ShowDescription(movie)">
                                 Movie Info
                             </button>
                         </div>
 
-                        <div class="card-footer bg-white border-top-0 pt-0 pb-3 px-3">
+                        <div class="card-footer border-top-0 pt-0 pb-3 px-3">
                             <div class="small text-uppercase fw-bold text-muted mb-2">Showtimes</div>
                             @if (movie.Showtimes != null && movie.Showtimes.Any())
                             {
@@ -102,7 +106,7 @@
                                         <div class="showtime-grid">
                                             @foreach (var showtime in showtimeGroup)
                                             {
-                                                <button class="btn btn-success shadow-sm fw-bold showtime-button" @onclick="() => GoToSeatSelector(movie.MovieId, movie.Title, showtime.ShowtimeId, showtime.StartsAt, showtime.BasePrice)">
+                                                <button class="btn btn-success fw-bold showtime-button" @onclick="() => GoToSeatSelector(movie.MovieId, movie.Title, showtime.ShowtimeId, showtime.StartsAt, showtime.BasePrice)">
                                                     <span>@FormatShowTime(showtime.StartsAt)</span>
                                                     <span class="small">@FormatUsd(showtime.BasePrice)</span>
                                                 </button>
@@ -125,7 +129,7 @@
 
 @if (_selectedMovie != null)
 {
-    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);" tabindex="-1">
+    <div class="modal fade show d-block movie-modal-backdrop" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-lg border-0">
                 <div class="modal-header bg-primary text-white border-0">
@@ -167,7 +171,7 @@
                                     <div class="showtime-grid">
                                         @foreach (var showtime in showtimeGroup)
                                         {
-                                            <button type="button" class="btn btn-outline-success showtime-button" @onclick="() => BookSelectedShowtime(_selectedMovie.MovieId, _selectedMovie.Title, showtime.ShowtimeId, showtime.StartsAt, showtime.BasePrice)">
+                                            <button type="button" class="btn btn-outline-primary showtime-button" @onclick="() => BookSelectedShowtime(_selectedMovie.MovieId, _selectedMovie.Title, showtime.ShowtimeId, showtime.StartsAt, showtime.BasePrice)">
                                                 <span>@FormatShowTime(showtime.StartsAt)</span>
                                                 <span class="small">@FormatUsd(showtime.BasePrice)</span>
                                             </button>
@@ -192,12 +196,63 @@
 
 <style>
     .transition-hover {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
     }
 
     .transition-hover:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+        transform: translateY(-5px);
+        box-shadow: 0 24px 60px rgba(24,33,47,.16)!important;
+    }
+
+    .now-playing-page .page-header {
+        color: #fff;
+    }
+
+    .now-playing-page .page-header h1 {
+        color: #fff;
+    }
+
+    .now-playing-page .page-header .text-muted {
+        color: rgba(255, 255, 255, 0.72) !important;
+    }
+
+    .toolbar {
+        background: rgba(255, 255, 255, 0.86);
+        border: 1px solid rgba(24, 33, 47, 0.1);
+        border-radius: 0.7rem;
+        padding: 1rem;
+        box-shadow: 0 12px 35px rgba(24, 33, 47, 0.08);
+    }
+
+    .date-picker .form-control {
+        background: #fff;
+    }
+
+    .movie-card {
+        background: #fff;
+    }
+
+    .movie-poster,
+    .movie-poster-placeholder {
+        object-fit: cover;
+        height: 350px;
+    }
+
+    .movie-card .card-body,
+    .movie-card .card-footer {
+        background: #fff;
+    }
+
+    .rating-badge {
+        background: #f3d98f;
+        color: #3a2a0a;
+    }
+
+    .meta-chip {
+        background: #f6f4f0;
+        border: 1px solid rgba(24, 33, 47, 0.08);
+        border-radius: 0.4rem;
+        padding: 0.28rem 0.45rem;
     }
 
     .showtime-grid {
@@ -212,6 +267,13 @@
         align-items: center;
         justify-content: center;
         min-height: 68px;
+        border-radius: 0.5rem;
+        box-shadow: 0 8px 20px rgba(15, 118, 110, 0.16);
+    }
+
+    .movie-modal-backdrop {
+        background: rgba(10,15,24,0.72);
+        backdrop-filter: blur(7px);
     }
 </style>
 

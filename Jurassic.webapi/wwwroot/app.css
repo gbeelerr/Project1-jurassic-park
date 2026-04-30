@@ -1,23 +1,90 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f5f2ed;
+    color: #18212f;
+}
+
+:root {
+    --jp-ink: #18212f;
+    --jp-muted: #667085;
+    --jp-panel: #ffffff;
+    --jp-surface: #f5f2ed;
+    --jp-line: rgba(24, 33, 47, 0.12);
+    --jp-red: #b42318;
+    --jp-red-dark: #7a1b15;
+    --jp-gold: #d6a84f;
+    --jp-teal: #0f766e;
+    --jp-shadow: 0 18px 50px rgba(24, 33, 47, 0.12);
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--jp-red);
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: var(--jp-red);
+    border-color: var(--jp-red);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--jp-red-dark);
+    border-color: var(--jp-red-dark);
+}
+
+.btn-success {
+    color: #fff;
+    background-color: var(--jp-teal);
+    border-color: var(--jp-teal);
+}
+
+.btn-success:hover,
+.btn-success:focus {
+    background-color: #115e59;
+    border-color: #115e59;
+}
+
+.btn-outline-primary,
+.btn-outline-info,
+.btn-outline-success {
+    color: var(--jp-red);
+    border-color: rgba(180, 35, 24, 0.45);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-info:hover,
+.btn-outline-success:hover {
+    color: #fff;
+    background-color: var(--jp-red);
+    border-color: var(--jp-red);
+}
+
+.btn-outline-secondary {
+    color: var(--jp-ink);
+    border-color: rgba(24, 33, 47, 0.25);
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.btn-outline-secondary:hover {
+    color: #fff;
+    background-color: var(--jp-ink);
+    border-color: var(--jp-ink);
+}
+
+.btn {
+    border-radius: 0.45rem;
+    font-weight: 700;
+    letter-spacing: 0;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem rgba(180, 35, 24, 0.35);
 }
 
 .content {
-    padding-top: 1.1rem;
+    padding-top: 0;
+    padding-bottom: 2rem;
 }
 
 h1:focus {
@@ -34,6 +101,83 @@ h1:focus {
 
 .validation-message {
     color: #e50000;
+}
+
+.card {
+    border: 1px solid var(--jp-line) !important;
+    border-radius: 0.7rem;
+    box-shadow: 0 10px 30px rgba(24, 33, 47, 0.08);
+    overflow: hidden;
+}
+
+.card.shadow-sm,
+.shadow-sm {
+    box-shadow: 0 14px 40px rgba(24, 33, 47, 0.1) !important;
+}
+
+.form-control {
+    border-radius: 0.45rem;
+    border-color: rgba(24, 33, 47, 0.18);
+    min-height: 2.55rem;
+}
+
+.form-control:focus {
+    border-color: rgba(180, 35, 24, 0.55);
+}
+
+.badge {
+    border-radius: 0.35rem;
+    font-weight: 700;
+}
+
+.text-primary {
+    color: var(--jp-red) !important;
+}
+
+.text-muted {
+    color: var(--jp-muted) !important;
+}
+
+.bg-primary {
+    background-color: var(--jp-red) !important;
+}
+
+.bg-info {
+    background-color: #c7eee9 !important;
+}
+
+.alert {
+    border: 1px solid var(--jp-line);
+    border-radius: 0.7rem;
+}
+
+.list-group-item {
+    background: transparent;
+}
+
+.page-shell {
+    max-width: 1180px;
+    margin-inline: auto;
+}
+
+.page-header {
+    border-bottom: 1px solid var(--jp-line);
+    padding-bottom: 1rem;
+}
+
+.now-playing-page .page-header,
+.seat-page .page-header,
+.checkout-page .page-header,
+.profile-page .page-header {
+    border-bottom-color: rgba(255, 255, 255, 0.16);
+}
+
+.eyebrow {
+    color: var(--jp-red);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
 }
 
 .blazor-error-boundary {

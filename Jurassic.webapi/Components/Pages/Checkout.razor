@@ -11,9 +11,12 @@
 
 <PageTitle>Checkout</PageTitle>
 
-<div class="container mt-4 pb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-        <h1 class="h2 fw-bold text-primary mb-0">Checkout</h1>
+<div class="container mt-4 pb-5 page-shell checkout-page">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <div class="eyebrow mb-2">Secure demo checkout</div>
+            <h1 class="h2 fw-bold mb-0">Checkout</h1>
+        </div>
         <button type="button" class="btn btn-outline-secondary" @onclick="GoHome">Home</button>
     </div>
 
@@ -49,7 +52,7 @@
 
         <div class="row g-4">
             <div class="col-lg-7">
-                <div class="card shadow-sm border-0 mb-4">
+                <div class="card checkout-card shadow-sm border-0 mb-4">
                     <div class="card-body p-4">
                         <div class="text-uppercase text-muted fw-semibold small mb-3">Booking details</div>
                         <dl class="row mb-0">
@@ -66,7 +69,7 @@
                 </div>
             </div>
             <div class="col-lg-5">
-                <div class="card shadow-sm border-0 sticky-top" style="top: 6rem;">
+                <div class="card checkout-card shadow-sm border-0 sticky-top" style="top: 6rem;">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="text-muted fw-semibold">Estimated total</span>
@@ -85,6 +88,30 @@
         </div>
     }
 </div>
+
+<style>
+    .checkout-page .page-header {
+        color: #fff;
+    }
+
+    .checkout-page .page-header h1 {
+        color: #fff;
+    }
+
+    .checkout-card {
+        background: rgba(255, 255, 255, 0.96);
+    }
+
+    .checkout-page dt {
+        color: #667085;
+        font-weight: 800;
+    }
+
+    .checkout-page dd {
+        color: #18212f;
+        font-weight: 650;
+    }
+</style>
 
 @code {
     private static readonly CultureInfo UsCulture = CultureInfo.GetCultureInfo("en-US");

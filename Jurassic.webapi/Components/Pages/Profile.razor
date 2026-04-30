@@ -10,10 +10,11 @@
 
 <PageTitle>Profile</PageTitle>
 
-<div class="container py-4 pb-5" style="max-width: 720px;">
-    <div class="d-flex justify-content-between align-items-start gap-3 mb-4 flex-wrap border-bottom pb-3">
+<div class="container py-4 pb-5 profile-page" style="max-width: 760px;">
+    <div class="page-header d-flex justify-content-between align-items-start gap-3 mb-4 flex-wrap">
         <div>
-            <h1 class="h2 fw-bold text-primary mb-1">Your profile</h1>
+            <div class="eyebrow mb-2">Account</div>
+            <h1 class="h2 fw-bold mb-1">Your profile</h1>
             <p class="text-muted small mb-0">Signed in as <span class="text-dark fw-semibold">@(Session.Email ?? "guest")</span></p>
         </div>
         @if (Session.IsSignedIn)
@@ -33,7 +34,7 @@
     }
     else
     {
-        <div class="card shadow-sm border-0 mb-4">
+        <div class="card profile-card shadow-sm border-0 mb-4">
             <div class="card-body p-4">
                 <h2 class="h5 fw-semibold mb-3">Your tickets</h2>
                 @if (_loading)
@@ -54,7 +55,7 @@
                     <ul class="list-group list-group-flush">
                         @foreach (var b in _bookings)
                         {
-                            <li class="list-group-item px-0 py-3">
+                            <li class="list-group-item ticket-row px-0 py-3">
                                 <div class="fw-semibold">@b.MovieTitle</div>
                                 <div class="small text-muted">@FormatStartsAt(b.StartsAt)</div>
                                 <div class="small mt-1">Seats: <span class="font-monospace">@string.Join(", ", b.SeatLabels)</span></div>
@@ -70,6 +71,29 @@
         </div>
     }
 </div>
+
+<style>
+    .profile-page .page-header {
+        color: #fff;
+    }
+
+    .profile-page .page-header h1 {
+        color: #fff;
+    }
+
+    .profile-page .page-header .text-muted,
+    .profile-page .page-header .text-dark {
+        color: rgba(255, 255, 255, 0.78) !important;
+    }
+
+    .profile-card {
+        background: rgba(255, 255, 255, 0.96);
+    }
+
+    .ticket-row {
+        border-color: rgba(24, 33, 47, 0.1);
+    }
+</style>
 
 @code {
     private List<MyBookingItemDto> _bookings = new();

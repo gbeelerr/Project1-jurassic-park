@@ -1,0 +1,632 @@
+openapi: 3.0.3
+info:
+  title: Jurassic Movie Service API
+  description: |
+    HTTP API for the Jurassic Park movie booking demo (`Jurassic.movieserviceapi`).
+    JSON request/response bodies use **snake_case** property names as defined on the C# DTOs.
+
+    **Authentication:** Protected routes require a JWT access token from `POST /auth/login`.
+    Send `Authorization: Bearer <access_token>`. The access token `sub` claim is the web user id (GUID string).
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:5080
+    description: Local HTTP (see launchSettings)
+  - url: https://localhost:7079
+    description: Local HTTPS
+
+tags:
+  - name: Diagnostics
+  - name: Movies
+  - name: Showtimes
+  - name: Seats
+  - name: Auth
+  - name: Bookings
+
+paths:
+  /weatherforecast:
+    get:
+      tags: [Diagnostics]
+      summary: Liveness-style ping
+      operationId: getWeatherForecast
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: API is running
+
+  /api/health:
+    get:
+      tags: [Diagnostics]
+      summary: Health check (includes PostgreSQL primary)
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                description: ASP.NET Core HealthReport JSON
+        '503':
+          description: Unhealthy
+
+  /movies:
+    get:
+      tags: [Movies]
+      summary: List movies
+      operationId: listMovies
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MovieListItemDto'
+
+  /movies/posters:
+    get:
+      tags: [Movies]
+      summary: List movies with poster URLs
+      operationId: listMoviePosters
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MoviePosterDto'
+
+  /movies/now-playing:
+    get:
+      tags: [Movies]
+      summary: Now playing with nested showtimes
+      operationId: getNowPlaying
+      parameters:
+        - name: date
+          in: query
+          required: false
+          description: |
+            Optional calendar date (UTC midnight used when filtering). Omit for default server behavior.
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NowPlayingMovieDto'
+
+  /showtimes/{showtimeId}:
+    get:
+      tags: [Showtimes]
+      summary: Showtime details
+      operationId: getShowtimeDetails
+      parameters:
+        - $ref: '#/components/parameters/ShowtimeId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShowtimeDetailsDto'
+        '404':
+          description: Showtime not found
+
+  /movies/{movieId}/showtimes/{showtimeId}/seats:
+    get:
+      tags: [Seats]
+      summary: Full seat manifest for a movie + showtime
+      description: |
+        Returns 404 if the showtime does not exist or does not belong to `movieId`.
+      operationId: getSeatsForMovieShowtime
+      parameters:
+        - $ref: '#/components/parameters/MovieId'
+        - $ref: '#/components/parameters/ShowtimeId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShowtimeSeatsResponse'
+        '404':
+          description: Not found (mismatch or missing showtime)
+
+  /showtimes/{showtimeId}/seats:
+    get:
+      tags: [Seats]
+      summary: Full seat manifest for a showtime
+      operationId: getSeatsForShowtime
+      parameters:
+        - $ref: '#/components/parameters/ShowtimeId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShowtimeSeatsResponse'
+        '404':
+          description: Showtime not found
+
+  /showtimes/{showtimeId}/seat-availability:
+    get:
+      tags: [Seats]
+      summary: Unavailable seat labels only
+      operationId: getShowtimeSeatAvailability
+      parameters:
+        - $ref: '#/components/parameters/ShowtimeId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeatAvailabilityResponse'
+        '404':
+          description: Showtime not found
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a web user
+      operationId: authRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              schema:
+                type: string
+              example: /auth/me
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Missing/invalid email or password, or password shorter than 8 characters
+        '409':
+          description: Email already registered (or unique constraint; may be `application/problem+json`)
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and obtain JWT + refresh token
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials or inactive user
+
+  /me/bookings:
+    get:
+      tags: [Bookings]
+      summary: Confirmed bookings for the authenticated user
+      operationId: getMyBookings
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MyBookingItem'
+        '401':
+          description: Missing or invalid token / user id claim
+
+  /movies/{movieId}/showtimes/{showtimeId}/reserve:
+    post:
+      tags: [Bookings]
+      summary: Reserve seats (movie-scoped)
+      description: |
+        Confirms a booking for the given seats. Returns 404 if showtime is missing or not for `movieId`.
+      operationId: reserveSeatsForMovieShowtime
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MovieId'
+        - $ref: '#/components/parameters/ShowtimeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReserveSeatsRequest'
+      responses:
+        '200':
+          description: Booking confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutConfirmResponse'
+        '400':
+          description: Invalid request, held seats, or invalid seat labels
+        '401':
+          description: Not authenticated or invalid user id in token
+        '404':
+          description: Showtime not found or movie/showtime mismatch
+        '409':
+          description: Seat conflict (already sold/held)
+        '500':
+          description: Problem response — unable to complete booking
+
+  /checkout/confirm:
+    post:
+      tags: [Bookings]
+      summary: Confirm checkout (showtime in body)
+      description: Same reservation rules as movie-scoped reserve; `showtime_id` is required in the body.
+      operationId: checkoutConfirm
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutConfirmRequest'
+      responses:
+        '200':
+          description: Booking confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutConfirmResponse'
+        '400':
+          description: Invalid request, held seats, or invalid seat labels
+        '401':
+          description: Not authenticated or invalid user id in token
+        '404':
+          description: Showtime not found
+        '409':
+          description: Seat conflict
+        '500':
+          description: Problem response — unable to complete booking
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        HS256 JWT issued by this service. Standard claims include `sub` (user id), `email`, and role.
+
+  parameters:
+    MovieId:
+      name: movieId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ShowtimeId:
+      name: showtimeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    MovieListItemDto:
+      type: object
+      required: [movie_id, title, status]
+      properties:
+        movie_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        duration_mins:
+          type: integer
+          nullable: true
+        rating:
+          type: string
+          nullable: true
+        status:
+          type: string
+
+    MoviePosterDto:
+      type: object
+      required: [movie_id, title, poster_url]
+      properties:
+        movie_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        poster_url:
+          type: string
+
+    ShowtimeDetail:
+      type: object
+      required: [showtime_id, starts_at, base_price]
+      properties:
+        showtime_id:
+          type: string
+          format: uuid
+        starts_at:
+          type: string
+          format: date-time
+        base_price:
+          type: number
+
+    NowPlayingMovieDto:
+      type: object
+      required:
+        - movie_id
+        - title
+        - description
+        - rating
+        - duration_mins
+        - poster_url
+        - screen_id
+        - screen_name
+        - screen_type
+        - showtimes
+      properties:
+        movie_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        rating:
+          type: string
+        duration_mins:
+          type: integer
+        poster_url:
+          type: string
+        screen_id:
+          type: string
+          format: uuid
+        screen_name:
+          type: string
+        screen_type:
+          type: string
+        showtimes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShowtimeDetail'
+
+    ShowtimeDetailsDto:
+      type: object
+      required:
+        - showtime_id
+        - movie_id
+        - movie_title
+        - screen_name
+        - starts_at
+        - base_price
+      properties:
+        showtime_id:
+          type: string
+          format: uuid
+        movie_id:
+          type: string
+          format: uuid
+        movie_title:
+          type: string
+        screen_name:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        base_price:
+          type: number
+
+    ShowtimeSeatItem:
+      type: object
+      required: [label, available]
+      properties:
+        label:
+          type: string
+          description: Normalized seat label
+        available:
+          type: boolean
+
+    ShowtimeSeatsResponse:
+      type: object
+      required:
+        - movie_id
+        - showtime_id
+        - movie_title
+        - screen_name
+        - starts_at
+        - base_price
+        - seats
+        - unavailable_seat_labels
+      properties:
+        movie_id:
+          type: string
+          format: uuid
+        showtime_id:
+          type: string
+          format: uuid
+        movie_title:
+          type: string
+        screen_name:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        base_price:
+          type: number
+        seats:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShowtimeSeatItem'
+        unavailable_seat_labels:
+          type: array
+          items:
+            type: string
+
+    SeatAvailabilityResponse:
+      type: object
+      required: [showtime_id, unavailable_seat_labels]
+      properties:
+        showtime_id:
+          type: string
+          format: uuid
+        unavailable_seat_labels:
+          type: array
+          items:
+            type: string
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        display_name:
+          type: string
+          nullable: true
+
+    RegisterResponse:
+      type: object
+      required: [user_id, email]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      required: [access_token, token_type, expires_in, refresh_token]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Access token lifetime in seconds
+        refresh_token:
+          type: string
+          description: Opaque refresh token (hex); stored server-side in sessions
+
+    ReserveSeatsRequest:
+      type: object
+      required: [seat_labels]
+      properties:
+        seat_labels:
+          type: array
+          minItems: 1
+          items:
+            type: string
+
+    CheckoutConfirmRequest:
+      type: object
+      required: [showtime_id, seat_labels]
+      properties:
+        showtime_id:
+          type: string
+          format: uuid
+        seat_labels:
+          type: array
+          minItems: 1
+          items:
+            type: string
+
+    CheckoutConfirmResponse:
+      type: object
+      required: [booking_id, total_cost, seat_labels]
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+        total_cost:
+          type: number
+        seat_labels:
+          type: array
+          items:
+            type: string
+          description: Normalized, distinct, ordered seat labels
+
+    MyBookingItem:
+      type: object
+      required: [booking_id, movie_title, starts_at, seat_labels]
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+        movie_title:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        seat_labels:
+          type: array
+          items:
+            type: string
+
+    ProblemDetails:
+      type: object
+      description: RFC 7807-style problem body used for some errors (e.g. DB conflict / unavailable)
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        traceId:
+          type: string

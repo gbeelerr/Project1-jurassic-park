@@ -22,6 +22,7 @@ builder.Services.AddHealthChecks()
     .AddCheck<PostgresPrimaryHealthCheck>("postgres-primary");
 
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
+builder.Services.Configure<InfinityOptions>(builder.Configuration.GetSection(InfinityOptions.SectionName));
 
 var jwtKey = builder.Configuration["Auth:JwtSigningKey"] ?? "";
 if (jwtKey.Length < 32)
@@ -47,12 +48,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<IMovieRepository, MovieRepository>();
+builder.Services.AddScoped<IMovieAttractionMapRepository, MovieAttractionMapRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddSingleton<DatabaseBootstrapper>();
 builder.Services.AddSingleton<WebAuthSeeder>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IPasswordHasher<WebUser>, PasswordHasher<WebUser>>();
+builder.Services.AddHttpClient<InfinityGateway>();
 
 builder.Services.AddCors(options =>
 {
@@ -101,6 +104,123 @@ app.MapGet("/movies/now-playing", async (DateOnly? date, IMovieRepository repo) 
     var dateUtc = date.HasValue ? date.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null;
     return await repo.GetNowPlayingAsync(dateUtc);
 });
+
+app.MapGet("/movies/ratings-summary", async (InfinityGateway gateway, CancellationToken cancellationToken) =>
+{
+    var summary = await gateway.GetRatingsSummaryAsync(cancellationToken);
+    return Results.Ok(summary);
+});
+
+app.MapGet("/movies/{movieId:guid}/rating", async (
+        Guid movieId,
+        HttpContext http,
+        InfinityGateway gateway,
+        CancellationToken cancellationToken) =>
+    {
+        var bearer = http.Request.Headers["X-Infinity-Bearer"].ToString();
+        var rating = await gateway.GetUserRatingAsync(movieId, bearer, cancellationToken);
+        return Results.Ok(rating);
+    });
+
+app.MapPost("/movies/{movieId:guid}/rating", async (
+        Guid movieId,
+        InfinityMovieRating request,
+        HttpContext http,
+        InfinityGateway gateway,
+        CancellationToken cancellationToken) =>
+    {
+        var bearer = http.Request.Headers["X-Infinity-Bearer"].ToString();
+        if (string.IsNullOrWhiteSpace(bearer))
+        {
+            return Results.Unauthorized();
+        }
+
+        var ok = await gateway.UpsertRatingAsync(movieId, request.Stars, bearer, cancellationToken);
+        return ok ? Results.Ok() : Results.BadRequest();
+    });
+
+app.MapGet("/movies/{movieId:guid}/reviews", async (
+        Guid movieId,
+        HttpContext http,
+        InfinityGateway gateway,
+        CancellationToken cancellationToken) =>
+    {
+        var bearer = http.Request.Headers["X-Infinity-Bearer"].ToString();
+        var reviews = await gateway.GetMovieReviewsAsync(movieId, bearer, cancellationToken);
+        return Results.Ok(reviews);
+    });
+
+app.MapPost("/movies/{movieId:guid}/reviews", async (
+        Guid movieId,
+        InfinityReviewUpsertRequest request,
+        HttpContext http,
+        InfinityGateway gateway,
+        CancellationToken cancellationToken) =>
+    {
+        var bearer = http.Request.Headers["X-Infinity-Bearer"].ToString();
+        if (string.IsNullOrWhiteSpace(bearer))
+        {
+            return Results.Unauthorized();
+        }
+
+        var ok = await gateway.CreateReviewAsync(movieId, request.Content, bearer, cancellationToken);
+        return ok ? Results.Ok() : Results.BadRequest();
+    });
+
+app.MapPut("/movies/{movieId:guid}/reviews/{reviewId:guid}", async (
+        Guid movieId,
+        Guid reviewId,
+        InfinityReviewUpsertRequest request,
+        HttpContext http,
+        InfinityGateway gateway,
+        CancellationToken cancellationToken) =>
+    {
+        _ = movieId;
+        var bearer = http.Request.Headers["X-Infinity-Bearer"].ToString();
+        if (string.IsNullOrWhiteSpace(bearer))
+        {
+            return Results.Unauthorized();
+        }
+
+        var ok = await gateway.UpdateReviewAsync(reviewId, request.Content, bearer, cancellationToken);
+        return ok ? Results.Ok() : Results.BadRequest();
+    });
+
+app.MapDelete("/movies/{movieId:guid}/reviews/{reviewId:guid}", async (
+        Guid movieId,
+        Guid reviewId,
+        HttpContext http,
+        InfinityGateway gateway,
+        CancellationToken cancellationToken) =>
+    {
+        _ = movieId;
+        var bearer = http.Request.Headers["X-Infinity-Bearer"].ToString();
+        if (string.IsNullOrWhiteSpace(bearer))
+        {
+            return Results.Unauthorized();
+        }
+
+        var ok = await gateway.DeleteReviewAsync(reviewId, bearer, cancellationToken);
+        return ok ? Results.Ok() : Results.BadRequest();
+    });
+
+app.MapPost("/infinity/auth/login", async (
+        InfinityAuthRequest request,
+        InfinityGateway gateway,
+        CancellationToken cancellationToken) =>
+    {
+        var auth = await gateway.LoginAsync(request, cancellationToken);
+        return auth is null ? Results.Unauthorized() : Results.Ok(auth);
+    });
+
+app.MapPost("/infinity/auth/register", async (
+        InfinityRegisterRequest request,
+        InfinityGateway gateway,
+        CancellationToken cancellationToken) =>
+    {
+        var ok = await gateway.RegisterAsync(request, cancellationToken);
+        return ok ? Results.Ok() : Results.BadRequest();
+    });
 
 app.MapGet("/showtimes/{showtimeId:guid}", async (Guid showtimeId, IMovieRepository repo) =>
 {

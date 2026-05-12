@@ -8,6 +8,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddScoped<UserSession>();
+builder.Services.AddScoped<InfinityRatingsClient>();
 
 // Blazor Server: UserSession is scoped per circuit. IHttpClientFactory wires message handlers from the
 // application root DI scope, so a delegating handler registered there gets a different UserSession than
@@ -16,7 +17,7 @@ builder.Services.AddScoped<UserSession>();
 builder.Services.AddScoped(static sp =>
 {
     var configuration = sp.GetRequiredService<IConfiguration>();
-    var baseUrl = configuration["MovieApi:BaseUrl"]?.TrimEnd('/') ?? "http://localhost:5080";
+    var baseUrl = configuration["MovieApi:BaseUrl"]?.TrimEnd('/') ?? "http://localhost:51811";
     var session = sp.GetRequiredService<UserSession>();
 
     var innerHandler = new SocketsHttpHandler

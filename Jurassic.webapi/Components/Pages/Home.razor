@@ -1,9 +1,11 @@
 ﻿@page "/"
 @using BlazorApp1.Models
+@using BlazorApp1.Services
 @using System.Net.Http.Json
 @using System.Linq
 @implements IAsyncDisposable
 @inject HttpClient Http
+@inject InfinityRatingsClient RatingsClient
 
 <PageTitle>Home</PageTitle>
 
@@ -59,9 +61,18 @@
                             {
                                 <div class="col-12 col-sm-6 col-lg-4 d-flex">
                                     <div class="w-100 d-flex flex-column align-items-center">
-                                        <img src="@movie.PosterUrl"
-                                             class="d-block poster-image"
-                                             alt="@($"{movie.Title} poster")" />
+                                        <div class="poster-wrap">
+                                            <img src="@movie.PosterUrl"
+                                                 class="d-block poster-image"
+                                                 alt="@($"{movie.Title} poster")" />
+                                            @if (_ratingsByMovie.TryGetValue(movie.MovieId, out var rating))
+                                            {
+                                                <div class="rating-overlay" title="Average rating">
+                                                    @BuildStars(rating.AvgStars)
+                                                    <span class="rating-meta">@rating.AvgStars.ToString("0.0") (@rating.ReviewCount)</span>
+                                                </div>
+                                            }
+                                        </div>
                                         <h5 class="mt-3 mb-0 text-center fw-semibold">@movie.Title</h5>
                                     </div>
                                 </div>
@@ -104,9 +115,18 @@
                         <div class="row g-4 justify-content-center px-2">
                             <div class="col-12 d-flex">
                                 <div class="w-100 d-flex flex-column align-items-center">
-                                    <img src="@movie.PosterUrl"
-                                         class="d-block poster-image"
-                                         alt="@($"{movie.Title} poster")" />
+                                    <div class="poster-wrap">
+                                        <img src="@movie.PosterUrl"
+                                             class="d-block poster-image"
+                                             alt="@($"{movie.Title} poster")" />
+                                        @if (_ratingsByMovie.TryGetValue(movie.MovieId, out var rating))
+                                        {
+                                            <div class="rating-overlay" title="Average rating">
+                                                @BuildStars(rating.AvgStars)
+                                                <span class="rating-meta">@rating.AvgStars.ToString("0.0") (@rating.ReviewCount)</span>
+                                            </div>
+                                        }
+                                    </div>
                                     <h5 class="mt-3 mb-0 text-center fw-semibold">@movie.Title</h5>
                                 </div>
                             </div>
@@ -156,6 +176,32 @@
         border-radius: 0.2rem;
         border: 2px solid #496b4a;
         box-shadow: 0 0.7rem 1.2rem rgba(0, 0, 0, 0.42);
+    }
+
+    .poster-wrap {
+        position: relative;
+    }
+
+    .rating-overlay {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: rgba(0, 0, 0, 0.78);
+        color: #facc2e;
+        border-radius: 0.35rem;
+        padding: 0.25rem 0.45rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        box-shadow: 0 0.3rem 0.9rem rgba(0, 0, 0, 0.45);
+    }
+
+    .rating-meta {
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.72rem;
     }
 
     #moviePosterCarouselDesktop .carousel-indicators button,
@@ -226,6 +272,7 @@
 @code {
     private const int AutoSlideIntervalSeconds = 10;
     private List<Movie>? movies;
+    private Dictionary<Guid, MovieRatingSummaryItem> _ratingsByMovie = new();
     private List<Movie> mobileMovies = new();
     private List<List<Movie>> movieSlides = new();
     private int activeSlideIndex;
@@ -244,6 +291,8 @@
         try
         {
             movies = await Http.GetFromJsonAsync<List<Movie>>("movies/posters") ?? new List<Movie>();
+            var ratings = await RatingsClient.GetRatingsSummaryAsync();
+            _ratingsByMovie = ratings.ToDictionary(item => item.MovieId, item => item);
             var linkedMovies = movies
                 .Where(movie => !string.IsNullOrWhiteSpace(movie.PosterUrl))
                 .ToList();
@@ -464,5 +513,12 @@
         _autoSlideCts?.Cancel();
         _autoSlideCts?.Dispose();
         return ValueTask.CompletedTask;
+    }
+
+    private static string BuildStars(decimal avg)
+    {
+        var rounded = (int)Math.Round(avg, MidpointRounding.AwayFromZero);
+        rounded = Math.Clamp(rounded, 0, 5);
+        return new string('★', rounded).PadRight(5, '☆');
     }
 }

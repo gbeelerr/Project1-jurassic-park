@@ -1,9 +1,12 @@
 @page "/now-playing"
 @using BlazorApp1.Models
+@using BlazorApp1.Services
 @using System.Net.Http.Json
 @using System.Globalization
 @inject HttpClient Http
 @inject NavigationManager Nav
+@inject InfinityRatingsClient RatingsClient
+@inject UserSession Session
 
 <PageTitle>Now Playing</PageTitle>
 
@@ -58,18 +61,27 @@
             {
                 <div class="col">
                     <div class="card h-100 shadow-sm transition-hover">
-                        @if (!string.IsNullOrEmpty(movie.PosterUrl))
-                        {
-                            <img src="@movie.PosterUrl" class="card-img-top" alt="@movie.Title Poster" style="object-fit: cover; height: 350px;">
-                        }
-                        else
-                        {
-                            <div class="card-img-top bg-dark d-flex flex-column align-items-center justify-content-center text-white p-4" style="height: 350px;">
-                                <div class="mb-2 text-secondary h4">Now Showing</div>
-                                <h5 class="fw-bold text-center">@movie.Title</h5>
-                                <span class="badge bg-secondary mt-2">Poster Coming Soon</span>
-                            </div>
-                        }
+                        <div class="poster-wrap">
+                            @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                            {
+                                <img src="@movie.PosterUrl" class="card-img-top" alt="@movie.Title Poster" style="object-fit: cover; height: 350px;">
+                            }
+                            else
+                            {
+                                <div class="card-img-top bg-dark d-flex flex-column align-items-center justify-content-center text-white p-4" style="height: 350px;">
+                                    <div class="mb-2 text-secondary h4">Now Showing</div>
+                                    <h5 class="fw-bold text-center">@movie.Title</h5>
+                                    <span class="badge bg-secondary mt-2">Poster Coming Soon</span>
+                                </div>
+                            }
+                            @if (_ratingsByMovie.TryGetValue(movie.MovieId, out var rating))
+                            {
+                                <div class="rating-overlay" title="Average rating">
+                                    @BuildStars(rating.AvgStars)
+                                    <span class="rating-meta">@rating.AvgStars.ToString("0.0") (@rating.ReviewCount)</span>
+                                </div>
+                            }
+                        </div>
 
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-3">
@@ -181,6 +193,121 @@
                             <span class="text-muted small italic">No showtimes available for this screen.</span>
                         }
                     </div>
+
+                    <h6 class="fw-bold text-uppercase small text-muted mb-2">Movie Ratings & Reviews</h6>
+                    <div class="border rounded p-3 bg-light mb-2">
+                        @if (_selectedMovie != null && _ratingsByMovie.TryGetValue(_selectedMovie.MovieId, out var modalRating))
+                        {
+                            <div class="small text-muted mb-2">
+                                Average: <span class="fw-semibold text-dark">@modalRating.AvgStars.ToString("0.0")</span>
+                                from <span class="fw-semibold text-dark">@modalRating.ReviewCount</span> reviews
+                            </div>
+                        }
+
+                        @if (string.IsNullOrWhiteSpace(Session.InfinityAccessToken))
+                        {
+                            <div class="small text-muted mb-2">Sign in with your Infinity (8082) account to post reviews and ratings.</div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-12 col-md-5">
+                                    <input class="form-control form-control-sm" @bind="_infinityUsername" placeholder="Username" />
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    <input type="password" class="form-control form-control-sm" @bind="_infinityPassword" placeholder="Password" />
+                                </div>
+                                <div class="col-12 col-md-2 d-grid">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="InfinitySignInAsync" disabled="@_authBusy">Sign in</button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2 small">
+                                <span>Signed in as <span class="fw-semibold">@Session.InfinityUsername</span></span>
+                                <button type="button" class="btn btn-sm btn-link p-0" @onclick="InfinitySignOut">Sign out</button>
+                            </div>
+
+                            <div class="fw-bold small text-uppercase text-muted mb-2">Your Movie Rating</div>
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="star-picker"
+                                     role="group"
+                                     aria-label="Star rating"
+                                     @onmouseleave="OnStarPickerLeave">
+                                    @for (var star = 1; star <= 5; star++)
+                                    {
+                                        var s = star;
+                                        <button type="button"
+                                                class="star-pick-btn"
+                                                @onclick="() => OnStarClick(s)"
+                                                @onmouseover="() => OnStarHover(s)">
+                                            <span class="star-pick-char @(StarFilled(s) ? "star-full" : "star-empty")">★</span>
+                                        </button>
+                                    }
+                                </div>
+                                <button type="button"
+                                        class="btn btn-sm btn-primary"
+                                        @onclick="SubmitRatingAsync"
+                                        disabled="@(_ratingSubmitBusy || _selectedMovie == null || !_draftStars.HasValue)">
+                                    Save Rating
+                                </button>
+                            </div>
+                            @if (_userRatingFetched && _draftStars == 0)
+                            {
+                                <div class="small text-muted mb-3 italic">You haven't rated this movie yet. Tap stars to rate.</div>
+                            }
+
+                            <div class="fw-bold small text-uppercase text-muted mb-2">Write a Review</div>
+                            <textarea class="form-control form-control-sm mb-2"
+                                      rows="3"
+                                      @bind="_newReviewContent"
+                                      placeholder="Share your thoughts about this movie..."></textarea>
+                            <div class="d-flex gap-2 mb-2">
+                                <button type="button"
+                                        class="btn btn-sm btn-primary"
+                                        @onclick="SubmitReviewAsync"
+                                        disabled="@(_reviewSubmitBusy || _selectedMovie == null || string.IsNullOrWhiteSpace(_newReviewContent))">
+                                    @(_editingReviewId.HasValue ? "Update Review" : "Post Review")
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ResetReviewDraft">Clear</button>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(_reviewError))
+                        {
+                            <div class="alert alert-warning py-2 small mt-2 mb-0">@_reviewError</div>
+                        }
+                    </div>
+
+                    <div class="small text-muted mb-2">Recent reviews</div>
+                    @if (_reviewsLoading)
+                    {
+                        <div class="text-muted small">Loading reviews...</div>
+                    }
+                    else if (_selectedMovieReviews.Count == 0)
+                    {
+                        <div class="text-muted small">No reviews yet for this movie.</div>
+                    }
+                    else
+                    {
+                        @foreach (var review in _selectedMovieReviews)
+                        {
+                            <div class="border rounded p-2 mb-2 bg-white">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <div class="fw-semibold small">@review.Author</div>
+                                    </div>
+                                    <div class="text-muted small">@review.Date</div>
+                                </div>
+                                <div class="small mt-1">@review.Content</div>
+                                @if (review.IsOwner && !string.IsNullOrWhiteSpace(Session.InfinityAccessToken))
+                                {
+                                    <div class="d-flex gap-2 mt-2">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditReview(review)">Edit</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteReviewAsync(review.Id)">Delete</button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
                 </div>
                 <div class="modal-footer border-top-0 p-3">
                     <button type="button" class="btn btn-secondary px-4" @onclick="CloseDescription">Close</button>
@@ -213,6 +340,59 @@
         justify-content: center;
         min-height: 68px;
     }
+
+    .poster-wrap {
+        position: relative;
+    }
+
+    .rating-overlay {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: rgba(0, 0, 0, 0.78);
+        color: #facc2e;
+        border-radius: 0.35rem;
+        padding: 0.25rem 0.45rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        box-shadow: 0 0.3rem 0.9rem rgba(0, 0, 0, 0.45);
+    }
+
+    .rating-meta {
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.72rem;
+    }
+
+    .star-picker {
+        user-select: none;
+    }
+
+    .star-pick-btn {
+        border: 0;
+        background: transparent;
+        padding: 0 0.12rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .star-pick-char {
+        font-size: 1.45rem;
+        line-height: 1;
+        display: inline-block;
+    }
+
+    .star-empty {
+        color: #9ca3af;
+    }
+
+    .star-full {
+        color: #facc15;
+        text-shadow: 0 0 1px rgba(0, 0, 0, 0.35);
+    }
 </style>
 
 @code {
@@ -221,6 +401,20 @@
     private Movie? _selectedMovie;
     private string _selectedDateIso = DateTime.UtcNow.ToString("yyyy-MM-dd");
     private static readonly CultureInfo UsCulture = CultureInfo.GetCultureInfo("en-US");
+    private Dictionary<Guid, MovieRatingSummaryItem> _ratingsByMovie = new();
+    private List<InfinityReviewItem> _selectedMovieReviews = [];
+    private bool _reviewsLoading;
+    private bool _reviewSubmitBusy;
+    private bool _ratingSubmitBusy;
+    private bool _authBusy;
+    private bool _userRatingFetched;
+    private string? _reviewError;
+    private int? _draftStars;
+    private int _hoverStars;
+    private string _newReviewContent = "";
+    private Guid? _editingReviewId;
+    private string _infinityUsername = "";
+    private string _infinityPassword = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -241,7 +435,12 @@
         try
         {
             var url = $"movies/now-playing?date={Uri.EscapeDataString(_selectedDateIso)}";
-            movies = await Http.GetFromJsonAsync<List<Movie>>(url);
+            var moviesTask = Http.GetFromJsonAsync<List<Movie>>(url);
+            var ratingsTask = RatingsClient.GetRatingsSummaryAsync();
+            await Task.WhenAll(moviesTask, ratingsTask);
+            movies = await moviesTask ?? [];
+            var ratings = await ratingsTask;
+            _ratingsByMovie = ratings.ToDictionary(item => item.MovieId, item => item);
         }
         catch (Exception ex)
         {
@@ -250,14 +449,21 @@
         }
     }
 
-    private void ShowDescription(Movie movie)
+    private async Task ShowDescription(Movie movie)
     {
         _selectedMovie = movie;
+        _hoverStars = 0;
+        _userRatingFetched = false;
+        ResetReviewDraft();
+        await Task.WhenAll(LoadSelectedMovieReviewsAsync(), LoadUserRatingAsync());
     }
 
     private void CloseDescription()
     {
         _selectedMovie = null;
+        _selectedMovieReviews = [];
+        _reviewError = null;
+        _editingReviewId = null;
     }
 
     private static IEnumerable<IGrouping<DateOnly, ShowtimeDetail>> GetShowtimeGroups(IEnumerable<ShowtimeDetail> showtimes)
@@ -317,5 +523,236 @@
     private void GoHome()
     {
         Nav.NavigateTo("/");
+    }
+
+    private static string BuildStars(decimal avg)
+    {
+        var rounded = (int)Math.Round(avg, MidpointRounding.AwayFromZero);
+        rounded = Math.Clamp(rounded, 0, 5);
+        return new string('★', rounded).PadRight(5, '☆');
+    }
+
+    private static string FormatReviewStars(InfinityReviewItem review) =>
+        review.Stars > 0 ? BuildStars(review.Stars) : BuildStars(0);
+
+    private string StarPickerHint =>
+        _draftStars.HasValue ? "" : "Tap a star (1–5). Grey = not selected, gold = your rating.";
+
+    private bool StarFilled(int star)
+    {
+        var upTo = _hoverStars > 0 ? _hoverStars : (_draftStars ?? 0);
+        return star <= upTo;
+    }
+
+    private void OnStarHover(int star)
+    {
+        _hoverStars = star;
+        StateHasChanged();
+    }
+
+    private void OnStarPickerLeave()
+    {
+        _hoverStars = 0;
+        StateHasChanged();
+    }
+
+    private void OnStarClick(int star)
+    {
+        _draftStars = star;
+        _hoverStars = 0;
+        _reviewError = null;
+        StateHasChanged();
+    }
+
+    private async Task LoadUserRatingAsync()
+    {
+        if (_selectedMovie == null || string.IsNullOrWhiteSpace(Session.InfinityAccessToken))
+        {
+            return;
+        }
+
+        try
+        {
+            var rating = await RatingsClient.GetUserRatingAsync(_selectedMovie.MovieId);
+            _draftStars = rating.Stars;
+            _userRatingFetched = true;
+        }
+        catch
+        {
+            _draftStars = 0;
+        }
+    }
+
+    private async Task SubmitRatingAsync()
+    {
+        if (_selectedMovie == null || !_draftStars.HasValue || _draftStars.Value == 0)
+        {
+            return;
+        }
+
+        _ratingSubmitBusy = true;
+        _reviewError = null;
+        try
+        {
+            var ok = await RatingsClient.UpsertRatingAsync(_selectedMovie.MovieId, _draftStars.Value);
+            if (!ok)
+            {
+                _reviewError = "Could not update rating. Verify Infinity sign in.";
+            }
+            else
+            {
+                // Refresh summary to show updated average
+                var ratings = await RatingsClient.GetRatingsSummaryAsync();
+                _ratingsByMovie = ratings.ToDictionary(item => item.MovieId, item => item);
+            }
+        }
+        catch
+        {
+            _reviewError = "Something went wrong while saving your rating.";
+        }
+        finally
+        {
+            _ratingSubmitBusy = false;
+        }
+    }
+
+    private async Task LoadSelectedMovieReviewsAsync()
+    {
+        if (_selectedMovie is null)
+        {
+            return;
+        }
+
+        _reviewsLoading = true;
+        _reviewError = null;
+        try
+        {
+            _selectedMovieReviews = await RatingsClient.GetReviewsAsync(_selectedMovie.MovieId);
+        }
+        catch
+        {
+            _selectedMovieReviews = [];
+            _reviewError = "Could not load reviews for this movie.";
+        }
+        finally
+        {
+            _reviewsLoading = false;
+        }
+    }
+
+    private async Task SubmitReviewAsync()
+    {
+        if (_selectedMovie is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_newReviewContent))
+        {
+            _reviewError = "Please enter some review text.";
+            return;
+        }
+
+        _reviewSubmitBusy = true;
+        _reviewError = null;
+        try
+        {
+            var text = _newReviewContent ?? "";
+            var ok = _editingReviewId.HasValue
+                ? await RatingsClient.UpdateReviewAsync(_selectedMovie.MovieId, _editingReviewId.Value, text)
+                : await RatingsClient.CreateReviewAsync(_selectedMovie.MovieId, text);
+
+            if (!ok)
+            {
+                _reviewError = "Review request was rejected. Verify Infinity sign in.";
+                return;
+            }
+
+            ResetReviewDraft();
+            await LoadSelectedMovieReviewsAsync();
+        }
+        catch (Exception)
+        {
+            _reviewError = "Something went wrong while saving your review. Please try again.";
+        }
+        finally
+        {
+            _reviewSubmitBusy = false;
+        }
+    }
+
+    private void StartEditReview(InfinityReviewItem review)
+    {
+        _editingReviewId = review.Id;
+        _newReviewContent = review.Content;
+    }
+
+    private async Task DeleteReviewAsync(Guid reviewId)
+    {
+        if (_selectedMovie is null)
+        {
+            return;
+        }
+
+        _reviewSubmitBusy = true;
+        try
+        {
+            var ok = await RatingsClient.DeleteReviewAsync(_selectedMovie.MovieId, reviewId);
+            if (!ok)
+            {
+                _reviewError = "Could not delete that review.";
+                return;
+            }
+
+            await LoadSelectedMovieReviewsAsync();
+        }
+        catch (Exception)
+        {
+            _reviewError = "Something went wrong while deleting the review.";
+        }
+        finally
+        {
+            _reviewSubmitBusy = false;
+        }
+    }
+
+    private void ResetReviewDraft()
+    {
+        _editingReviewId = null;
+        _draftStars = null;
+        _hoverStars = 0;
+        _newReviewContent = "";
+    }
+
+
+    private async Task InfinitySignInAsync()
+    {
+        _reviewError = null;
+        _authBusy = true;
+        try
+        {
+            var auth = await RatingsClient.LoginAsync(_infinityUsername, _infinityPassword);
+            if (auth is null || string.IsNullOrWhiteSpace(auth.Token))
+            {
+                _reviewError = "Infinity sign in failed.";
+                return;
+            }
+
+            Session.InfinityAccessToken = auth.Token;
+            Session.InfinityUsername = auth.Username;
+            Session.NotifyChanged();
+            await Task.WhenAll(LoadSelectedMovieReviewsAsync(), LoadUserRatingAsync());
+        }
+        finally
+        {
+            _authBusy = false;
+        }
+    }
+
+    private void InfinitySignOut()
+    {
+        Session.InfinityAccessToken = null;
+        Session.InfinityUsername = null;
+        Session.NotifyChanged();
     }
 }

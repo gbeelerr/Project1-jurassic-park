@@ -5,14 +5,19 @@ services:
       dockerfile: Jurassic.movieserviceapi/Dockerfile
     container_name: jurassic-movieservice
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
-      - "5080:8080"
+      - "${MOVIE_API_HOST_PORT:-51811}:${MOVIE_API_CONTAINER_PORT:-18081}"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_URLS: http://+:${MOVIE_API_CONTAINER_PORT:-18081}
       ConnectionStrings__DefaultConnection: "Host=postgres;Database=jurassic_api;Username=jurassic;Password=jurassic_dev"
       ConnectionStrings__WebConnection: "Host=postgres;Database=jurassic_web;Username=jurassic;Password=jurassic_dev"
       Auth__JwtSigningKey: "docker-dev-only-change-in-production-min-32-chars!"
+      # Infinity on the host (see thirdpartyapi.md): localhost inside the container is wrong; use host.docker.internal on Docker Desktop.
+      Infinity__WebApiBaseUrl: "http://host.docker.internal:8080"
+      Infinity__WebAppBaseUrl: "http://host.docker.internal:8082"
 
   web:
     build:
@@ -21,14 +26,14 @@ services:
     container_name: jurassic-web
     restart: unless-stopped
     ports:
-      - "5044:8080"
+      - "${WEB_HOST_PORT:-51444}:8080"
     volumes:
       - jurassic_web_keys:/root/.aspnet/DataProtection-Keys
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_HTTP_ONLY: "true"
-      MovieApi__BaseUrl: http://movieservice:8080
+      MovieApi__BaseUrl: http://movieservice:${MOVIE_API_CONTAINER_PORT:-18081}
 
   postgres:
     image: postgres:16-alpine
@@ -39,8 +44,8 @@ services:
       POSTGRES_PASSWORD: jurassic_dev
       POSTGRES_DB: jurassic_api
     ports:
-      # Default 5433 avoids clashing with a local PostgreSQL install on 5432.
-      - "${POSTGRES_HOST_PORT:-5433}:5432"
+      # Default 55433 avoids clashes with typical local Postgres ports.
+      - "${POSTGRES_HOST_PORT:-55433}:5432"
     volumes:
       - jurassic_pgdata:/var/lib/postgresql/data
       - ./apidb/apidb.sql:/schema/apidb.sql:ro

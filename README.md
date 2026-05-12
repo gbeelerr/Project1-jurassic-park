@@ -26,8 +26,15 @@ To rerun after changes
 docker compose down --remove-orphans ; docker compose up --build
 ```
 
-Then open **http://localhost:5044** (Blazor web), **http://localhost:5080/movies** (movie API), and connect to Postgres on the host at **port 5433** (user `jurassic`, password `jurassic_dev`, databases `jurassic_api` and `jurassic_web`).
+Then open **http://localhost:51444** (Blazor web), **http://localhost:51811/movies** (movie API), and connect to Postgres on the host at **port 55433** (user `jurassic`, password `jurassic_dev`, databases `jurassic_api` and `jurassic_web`).
 
 If `docker compose` is not found, try the older CLI: `docker-compose up --build -d`.
 
-**Port 5432 already in use:** Compose maps Postgres to host port **5433** by default so it does not conflict with a local PostgreSQL server. To use another port: `POSTGRES_HOST_PORT=5434 docker compose up -d`. To use 5432 explicitly: `POSTGRES_HOST_PORT=5432 docker compose up -d` (stop the other service using 5432 first).
+**Port overrides:** Compose now uses high-number defaults to reduce conflicts:
+- Web host port: `WEB_HOST_PORT` (default `51444`)
+- Movie API host port: `MOVIE_API_HOST_PORT` (default `51811`)
+- Movie API container port: `MOVIE_API_CONTAINER_PORT` (default `18081`)
+- Postgres host port: `POSTGRES_HOST_PORT` (default `55433`)
+
+Example override:
+`POSTGRES_HOST_PORT=55434 MOVIE_API_HOST_PORT=51812 WEB_HOST_PORT=51445 docker compose up --build -d`

@@ -50,6 +50,14 @@ CREATE TABLE IF NOT EXISTS movies (
     CONSTRAINT movies_pkey PRIMARY KEY (id)
 );
 
+CREATE TABLE IF NOT EXISTS movie_attraction_map (
+    movie_id UUID NOT NULL,
+    attraction_id UUID NOT NULL UNIQUE,
+    synced_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT movie_attraction_map_pkey PRIMARY KEY (movie_id),
+    CONSTRAINT movie_attraction_map_movie_id_fkey FOREIGN KEY (movie_id) REFERENCES movies (id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS screens (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,

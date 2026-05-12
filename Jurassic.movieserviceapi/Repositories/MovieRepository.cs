@@ -126,8 +126,11 @@ public class MovieRepository : IMovieRepository
             WHERE m.status = 'now_showing'
               AND st.is_cancelled = false
               AND (
-                    (@Date IS NULL AND DATE(st.starts_at AT TIME ZONE 'UTC') >= CURRENT_DATE)
-                 OR (@Date IS NOT NULL AND DATE(st.starts_at AT TIME ZONE 'UTC') = (@Date AT TIME ZONE 'UTC')::date)
+                    (CAST(@Date AS timestamp with time zone) IS NULL
+                        AND DATE(st.starts_at AT TIME ZONE 'UTC') >= CURRENT_DATE)
+                 OR (CAST(@Date AS timestamp with time zone) IS NOT NULL
+                        AND DATE(st.starts_at AT TIME ZONE 'UTC')
+                            = ((CAST(@Date AS timestamp with time zone)) AT TIME ZONE 'UTC')::date)
               )
             GROUP BY 
                 m.id, m.title, m.description, m.rating, m.duration_mins, m.poster_url,

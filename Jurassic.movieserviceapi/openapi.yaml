@@ -10,7 +10,7 @@ info:
   version: 1.0.0
 
 servers:
-  - url: http://localhost:5080
+  - url: http://localhost:51811
     description: Local HTTP (see launchSettings)
   - url: https://localhost:7079
     description: Local HTTPS

@@ -8,6 +8,8 @@ public sealed class UserSession
     public string? Email { get; set; }
     public string? AccessToken { get; set; }
     public string? RefreshToken { get; set; }
+    public string? InfinityAccessToken { get; set; }
+    public string? InfinityUsername { get; set; }
 
     /// <summary>Optional app URL captured before navigating to sign in (checkout flow).</summary>
     public string? ReturnAfterSignIn { get; set; }

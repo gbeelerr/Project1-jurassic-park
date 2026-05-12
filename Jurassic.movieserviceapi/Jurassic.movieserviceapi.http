@@ -1,4 +1,4 @@
-@Jurassic.movieserviceapi_HostAddress = http://localhost:5080
+@Jurassic.movieserviceapi_HostAddress = http://localhost:51811
 
 GET {{Jurassic.movieserviceapi_HostAddress}}/weatherforecast/
 Accept: application/json

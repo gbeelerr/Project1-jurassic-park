@@ -11,6 +11,6 @@ RUN dotnet publish -c Release -o /app/publish --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
-EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 18081
+ENV ASPNETCORE_URLS=http://+:18081
 ENTRYPOINT ["dotnet", "Jurassic.movieserviceapi.dll"]

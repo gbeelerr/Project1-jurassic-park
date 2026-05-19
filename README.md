@@ -38,3 +38,10 @@ If `docker compose` is not found, try the older CLI: `docker-compose up --build 
 
 Example override:
 `POSTGRES_HOST_PORT=55434 MOVIE_API_HOST_PORT=51812 WEB_HOST_PORT=51445 docker compose up --build -d`
+
+### Star Wars/Infinity API integration   
+To implement the reviews api, you need to pull the infinity app from their branch titled **api-for-jurassic**. To run their api you also need an env file with the following (get the keys from slack)   
+```
+MAPBOX_ACCESS_TOKEN=
+JWT_SIGNING_KEY=
+```
